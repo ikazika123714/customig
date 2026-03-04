@@ -4,13 +4,13 @@
 
 static char rowStaticRef[] = "row";
 
-// --- SPECIJALNA KLASA ZA DUGINU ANIMACIJU ---
-@interface PekiRainbowLabel : UILabel
+// --- SPECIJALNA KLASA ZA DUGINU ANIMACIJU (HAWAII STYLE) ---
+@interface HawaiiRainbowLabel : UILabel
 @property (nonatomic, strong) CAGradientLayer *gradientLayer;
 - (void)startRainbowAnimation;
 @end
 
-@implementation PekiRainbowLabel
+@implementation HawaiiRainbowLabel
 - (void)layoutSubviews {
     [super layoutSubviews];
     self.gradientLayer.frame = CGRectMake(-self.bounds.size.width, 0, 3 * self.bounds.size.width, self.bounds.size.height);
@@ -65,13 +65,13 @@ static char rowStaticRef[] = "row";
     if (self) {
         self.sections = sections;
         self.reduceMargin = reduceMargin;
-        self.title = @"PekiWare Settings";
+        self.title = @"Hawaii Settings";
     }
     return self;
 }
 
 - (instancetype)init {
-    return [self initWithTitle:@"PekiWare Settings" sections:[SCITweakSettings sections] reduceMargin:YES];
+    return [self initWithTitle:@"Hawaii Settings" sections:[SCITweakSettings sections] reduceMargin:YES];
 }
 
 - (void)viewDidLoad {
@@ -79,9 +79,9 @@ static char rowStaticRef[] = "row";
 
     self.view.backgroundColor = [UIColor blackColor];
 
-    // Postavljanje animiranog naslova na vrhu
-    PekiRainbowLabel *navLabel = [[PekiRainbowLabel alloc] initWithFrame:CGRectMake(0, 0, 200, 44)];
-    navLabel.text = @"PekiWare Settings";
+    // Postavljanje animiranog naslova na vrhu (Hawaii Settings)
+    HawaiiRainbowLabel *navLabel = [[HawaiiRainbowLabel alloc] initWithFrame:CGRectMake(0, 0, 200, 44)];
+    navLabel.text = @"Hawaii Settings";
     navLabel.font = [UIFont systemFontOfSize:19 weight:UIFontWeightBold];
     navLabel.textAlignment = NSTextAlignmentCenter;
     [navLabel startRainbowAnimation];
@@ -105,14 +105,14 @@ static char rowStaticRef[] = "row";
     cell.backgroundColor = [UIColor colorWithRed:0.11 green:0.11 blue:0.12 alpha:1.0];
     cell.selectionStyle = UITableViewCellSelectionStyleDefault;
 
-    // Kreiranje duginih slova za svaku stavku
-    PekiRainbowLabel *rainbowLabel = [[PekiRainbowLabel alloc] initWithFrame:CGRectMake(55, 12, 250, 22)];
+    // Kreiranje duginih slova za svaku stavku (Hawaii Style)
+    HawaiiRainbowLabel *rainbowLabel = [[HawaiiRainbowLabel alloc] initWithFrame:CGRectMake(55, 12, 250, 22)];
     rainbowLabel.text = row.title;
     rainbowLabel.font = [UIFont systemFontOfSize:17 weight:UIFontWeightMedium];
     [rainbowLabel startRainbowAnimation];
     [cell.contentView addSubview:rainbowLabel];
 
-    // Ikona (Bela ikona, slova su duga)
+    // Ikona (Bela ikona)
     if (row.icon != nil) {
         UIImageView *iconView = [[UIImageView alloc] initWithImage:[row.icon image]];
         iconView.tintColor = [UIColor whiteColor];
