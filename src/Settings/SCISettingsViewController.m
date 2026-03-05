@@ -1,12 +1,12 @@
 #import "SCISettingsViewController.h"
 #import "SCISetting.h"
-#import "SCITweakSettings.h"
+#import "TweakSettings.h"
 #import <objc/runtime.h>
 #import <QuartzCore/QuartzCore.h>
 
 static char rowStaticRef[] = "row";
 
-// --- KLASA ZA RAINBOW TEKST (SVAKO SLOVO DRUGA BOJA - KAO NA VIDEU) ---
+// --- KLASA ZA RAINBOW TEKST (EFEKAT IZ VIDEA) ---
 @interface HawaiiRainbowLabel : UILabel
 @property (nonatomic, strong) CAGradientLayer *gradientLayer;
 @end
@@ -42,7 +42,7 @@ static char rowStaticRef[] = "row";
 }
 @end
 
-// --- DEKLARACIJA INTERFEJSA (OVO REŠAVA "PROPERTY NOT FOUND" GREŠKE) ---
+// --- DEKLARACIJA INTERFEJSA (REŠAVA PROPERTY GREŠKE) ---
 @interface SCISettingsViewController () <UITableViewDataSource, UITableViewDelegate>
 @property (nonatomic, strong) UITableView *tableView;
 @property (nonatomic, copy) NSArray *sections;
@@ -60,7 +60,7 @@ static char rowStaticRef[] = "row";
         NSMutableArray *filteredSections = [NSMutableArray new];
         for (NSDictionary *section in sections) {
             NSMutableArray *filteredRows = [NSMutableArray new];
-            NSArray *rows = section[@"rows"];
+            NSArray *rows = [section objectForKey:@"rows"];
             for (SCISetting *row in rows) {
                 NSString *rt = [row.title lowercaseString];
                 if (![rt containsString:@"donate"] && ![rt containsString:@"view repo"] && 
@@ -70,12 +70,12 @@ static char rowStaticRef[] = "row";
             }
             if (filteredRows.count > 0) {
                 NSMutableDictionary *newSec = [section mutableCopy];
-                newSec[@"rows"] = filteredRows;
+                [newSec setObject:filteredRows forKey:@"rows"];
                 [filteredSections addObject:newSec];
             }
         }
 
-        // DODAJEMO DEVELOPER I TIKTOK NA KRAJ
+        // DODAJEMO DEVELOPER I TIKTOK
         SCISetting *devRow = [[SCISetting alloc] init];
         devRow.title = @"Hawaii Developer";
         devRow.subtitle = @"Hawaii Custom Mod";
@@ -91,7 +91,7 @@ static char rowStaticRef[] = "row";
 }
 
 - (instancetype)init {
-    // ISPRAVLJENO: Koristi SCITweakSettings (kao što piše u logu)
+    // Ovde koristimo klasu SCITweakSettings iz fajla TweakSettings.h
     return [self initWithTitle:@"Hawaii Settings" sections:[SCITweakSettings sections] reduceMargin:YES];
 }
 
@@ -117,9 +117,9 @@ static char rowStaticRef[] = "row";
 }
 
 - (UITableViewCell *)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)indexPath {
-    NSDictionary *section = self.sections[indexPath.section];
-    NSArray *rows = section[@"rows"];
-    SCISetting *row = rows[indexPath.row];
+    NSDictionary *section = [self.sections objectAtIndex:indexPath.section];
+    NSArray *rows = [section objectForKey:@"rows"];
+    SCISetting *row = [rows objectAtIndex:indexPath.row];
 
     NSString *cellID = [NSString stringWithFormat:@"HCell-%ld-%ld", (long)indexPath.section, (long)indexPath.row];
     UITableViewCell *cell = [tableView dequeueReusableCellWithIdentifier:cellID];
@@ -164,9 +164,9 @@ static char rowStaticRef[] = "row";
 }
 
 - (void)tableView:(UITableView *)tableView didSelectRowAtIndexPath:(NSIndexPath *)indexPath {
-    NSDictionary *section = self.sections[indexPath.section];
-    NSArray *rows = section[@"rows"];
-    SCISetting *row = rows[indexPath.row];
+    NSDictionary *section = [self.sections objectAtIndex:indexPath.section];
+    NSArray *rows = [section objectForKey:@"rows"];
+    SCISetting *row = [rows objectAtIndex:indexPath.row];
 
     if ([row.title containsString:@"TikTok"]) {
         NSURL *url = [NSURL URLWithString:@"https://www.tiktok.com/@zivkovichhh_"]; 
@@ -182,8 +182,8 @@ static char rowStaticRef[] = "row";
 
 - (NSInteger)numberOfSectionsInTableView:(UITableView *)tableView { return self.sections.count; }
 - (NSInteger)tableView:(UITableView *)tableView numberOfRowsInSection:(NSInteger)section { 
-    NSDictionary *sec = self.sections[section];
-    NSArray *rows = sec[@"rows"];
+    NSDictionary *sec = [self.sections objectAtIndex:section];
+    NSArray *rows = [sec objectForKey:@"rows"];
     return rows.count; 
 }
 
