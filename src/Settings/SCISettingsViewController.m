@@ -1,11 +1,11 @@
 #import "SCISettingsViewController.h"
 #import "SCISetting.h"
+#import "TweakSettings.h"
 #import <objc/runtime.h>
 #import <QuartzCore/QuartzCore.h>
 
 static char rowStaticRef[] = "row";
 
-// --- KLASA ZA PRAVI RAINBOW TEKST (EFEKAT IZ VIDEA) ---
 @interface HawaiiRainbowLabel : UILabel
 @property (nonatomic, strong) CAGradientLayer *gradientLayer;
 @end
@@ -23,11 +23,7 @@ static char rowStaticRef[] = "row";
             (id)[UIColor cyanColor].CGColor, (id)[UIColor blueColor].CGColor,
             (id)[UIColor purpleColor].CGColor, (id)[UIColor redColor].CGColor
         ];
-        
-        // Tekst služi kao maska kroz koju se vidi duga
         self.layer.mask = self.gradientLayer;
-        
-        // Animacija pomeranja boja
         CABasicAnimation *anim = [CABasicAnimation animationWithKeyPath:@"colors"];
         anim.toValue = @[
             (id)[UIColor purpleColor].CGColor, (id)[UIColor redColor].CGColor,
@@ -45,19 +41,16 @@ static char rowStaticRef[] = "row";
 @end
 
 @implementation SCISettingsViewController
-
 - (instancetype)initWithTitle:(NSString *)title sections:(NSArray *)sections reduceMargin:(BOOL)reduceMargin {
     self = [super init];
     if (self) {
         self.title = @"Hawaii Settings";
-        
         NSMutableArray *filteredSections = [NSMutableArray new];
         for (NSDictionary *section in sections) {
             NSMutableArray *filteredRows = [NSMutableArray new];
             for (SCISetting *row in section[@"rows"]) {
                 NSString *rt = [row.title lowercaseString];
-                if (![rt containsString:@"donate"] && ![rt containsString:@"view repo"] && 
-                    ![rt containsString:@"developer"] && ![rt containsString:@"discord"]) {
+                if (![rt containsString:@"donate"] && ![rt containsString:@"view repo"] && ![rt containsString:@"developer"] && ![rt containsString:@"discord"]) {
                     [filteredRows addObject:row];
                 }
             }
@@ -67,35 +60,30 @@ static char rowStaticRef[] = "row";
                 [filteredSections addObject:newSec];
             }
         }
-
-        // Ručno dodavanje Hawaii opcija na dno
         SCISetting *devRow = [SCISetting new];
         devRow.title = @"Hawaii Developer";
         devRow.subtitle = @"Hawaii Custom Mod";
-        
         SCISetting *tkRow = [SCISetting new];
         tkRow.title = @"Hawaii TikTok";
         tkRow.subtitle = @"Join the community!";
-
         [filteredSections addObject:@{@"header":@"", @"rows":@[devRow, tkRow]}];
-
         self.sections = [filteredSections copy];
         self.reduceMargin = reduceMargin;
     }
     return self;
 }
-
+- (instancetype)init {
+    return [self initWithTitle:@"Hawaii Settings" sections:[TweakSettings sections] reduceMargin:YES];
+}
 - (void)viewDidLoad {
     [super viewDidLoad];
     self.view.backgroundColor = [UIColor blackColor];
-    
     HawaiiRainbowLabel *navLabel = [[HawaiiRainbowLabel alloc] initWithFrame:CGRectMake(0, 0, 200, 44)];
     navLabel.text = self.title;
     navLabel.font = [UIFont systemFontOfSize:19 weight:UIFontWeightBold];
     navLabel.textAlignment = NSTextAlignmentCenter;
     navLabel.backgroundColor = [UIColor clearColor]; 
     self.navigationItem.titleView = navLabel;
-
     self.tableView = [[UITableView alloc] initWithFrame:self.view.bounds style:UITableViewStyleInsetGrouped];
     self.tableView.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
     self.tableView.backgroundColor = [UIColor blackColor];
@@ -105,36 +93,26 @@ static char rowStaticRef[] = "row";
     self.tableView.contentInset = UIEdgeInsetsMake(-30, 0, 0, 0);
     [self.view addSubview:self.tableView];
 }
-
 - (UITableViewCell *)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)indexPath {
     SCISetting *row = self.sections[indexPath.section][@"rows"][indexPath.row];
     NSString *cellID = [NSString stringWithFormat:@"HCell-%ld-%ld", (long)indexPath.section, (long)indexPath.row];
-    
     UITableViewCell *cell = [tableView dequeueReusableCellWithIdentifier:cellID];
     if (!cell) {
         cell = [[UITableViewCell alloc] initWithStyle:UITableViewCellStyleSubtitle reuseIdentifier:cellID];
         cell.backgroundColor = [UIColor colorWithRed:0.11 green:0.11 blue:0.12 alpha:1.0];
-        
         HawaiiRainbowLabel *rainbow = [[HawaiiRainbowLabel alloc] initWithFrame:CGRectMake(55, 11, 280, 24)];
-        rainbow.tag = 999;
+        rainbow.tag = 555;
         rainbow.backgroundColor = [UIColor clearColor];
         [cell.contentView addSubview:rainbow];
     }
-    
-    HawaiiRainbowLabel *rainbow = (HawaiiRainbowLabel *)[cell.contentView viewWithTag:999];
+    HawaiiRainbowLabel *rainbow = (HawaiiRainbowLabel *)[cell.contentView viewWithTag:555];
     rainbow.text = [row.title stringByReplacingOccurrencesOfString:@"PekiWare" withString:@"Hawaii"];
     rainbow.font = [UIFont systemFontOfSize:18 weight:UIFontWeightBold];
-
     cell.detailTextLabel.text = row.subtitle;
     cell.detailTextLabel.textColor = [UIColor orangeColor];
     cell.detailTextLabel.font = [UIFont systemFontOfSize:13];
     cell.textLabel.text = @""; 
-
-    if (row.icon != nil) {
-        cell.imageView.image = [row.icon image];
-        cell.imageView.tintColor = [UIColor whiteColor];
-    }
-
+    if (row.icon != nil) { cell.imageView.image = [row.icon image]; cell.imageView.tintColor = [UIColor whiteColor]; }
     if (row.type == 1) { 
         UISwitch *toggle = [UISwitch new];
         toggle.on = [[NSUserDefaults standardUserDefaults] boolForKey:row.defaultsKey];
@@ -148,7 +126,6 @@ static char rowStaticRef[] = "row";
     }
     return cell;
 }
-
 - (void)tableView:(UITableView *)tableView didSelectRowAtIndexPath:(NSIndexPath *)indexPath {
     SCISetting *row = self.sections[indexPath.section][@"rows"][indexPath.row];
     if ([row.title containsString:@"TikTok"]) {
@@ -157,17 +134,14 @@ static char rowStaticRef[] = "row";
     } else if (row.navSections.count > 0) {
         SCISettingsViewController *vc = [[SCISettingsViewController alloc] initWithTitle:row.title sections:row.navSections reduceMargin:NO];
         [self.navigationController pushViewController:vc animated:YES];
-    } else if (row.url) {
-        [[UIApplication sharedApplication] openURL:row.url options:@{} completionHandler:nil];
-    }
+    } else if (row.url) { [[UIApplication sharedApplication] openURL:row.url options:@{} completionHandler:nil]; }
     [tableView deselectRowAtIndexPath:indexPath animated:YES];
 }
-
 - (NSInteger)numberOfSectionsInTableView:(UITableView *)tableView { return self.sections.count; }
 - (NSInteger)tableView:(UITableView *)tableView numberOfRowsInSection:(NSInteger)section { return [self.sections[section][@"rows"] count]; }
-
 - (void)switchChanged:(UISwitch *)sender {
     SCISetting *row = objc_getAssociatedObject(sender, rowStaticRef);
     [[NSUserDefaults standardUserDefaults] setBool:sender.isOn forKey:row.defaultsKey];
 }
 @end
+// Force build 21
