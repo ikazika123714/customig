@@ -1,6 +1,6 @@
 #import "SCISettingsViewController.h"
 #import "SCISetting.h"
-#import "TweakSettings.h"
+#import "SCITweakSettings.h"
 #import <objc/runtime.h>
 #import <QuartzCore/QuartzCore.h>
 
@@ -42,14 +42,22 @@ static char rowStaticRef[] = "row";
 }
 @end
 
-// --- DEKLARACIJA INTERFEJSA (REŠAVA PROPERTY GREŠKE) ---
+// --- DEKLARACIJA (OVO POPRAVLJA SVE "PROPERTY NOT FOUND" GREŠKE) ---
 @interface SCISettingsViewController () <UITableViewDataSource, UITableViewDelegate>
+{
+    UITableView *_tableView;
+    NSArray *_sections;
+    BOOL _reduceMargin;
+}
 @property (nonatomic, strong) UITableView *tableView;
 @property (nonatomic, copy) NSArray *sections;
 @property (nonatomic, assign) BOOL reduceMargin;
 @end
 
 @implementation SCISettingsViewController
+@synthesize tableView = _tableView;
+@synthesize sections = _sections;
+@synthesize reduceMargin = _reduceMargin;
 
 - (instancetype)initWithTitle:(NSString *)title sections:(NSArray *)sections reduceMargin:(BOOL)reduceMargin {
     self = [super init];
@@ -75,7 +83,7 @@ static char rowStaticRef[] = "row";
             }
         }
 
-        // DODAJEMO DEVELOPER I TIKTOK
+        // RUČNO DODAJEMO DEVELOPER I TIKTOK
         SCISetting *devRow = [[SCISetting alloc] init];
         devRow.title = @"Hawaii Developer";
         devRow.subtitle = @"Hawaii Custom Mod";
@@ -91,7 +99,7 @@ static char rowStaticRef[] = "row";
 }
 
 - (instancetype)init {
-    // Ovde koristimo klasu SCITweakSettings iz fajla TweakSettings.h
+    // FIX: SCITweakSettings umesto TweakSettings
     return [self initWithTitle:@"Hawaii Settings" sections:[SCITweakSettings sections] reduceMargin:YES];
 }
 
@@ -112,7 +120,7 @@ static char rowStaticRef[] = "row";
     self.tableView.separatorColor = [UIColor colorWithWhite:1.0 alpha:0.1];
     self.tableView.dataSource = self;
     self.tableView.delegate = self;
-    self.tableView.contentInset = UIEdgeInsetsMake(self.reduceMargin ? -30 : 0, 0, 0, 0);
+    self.tableView.contentInset = UIEdgeInsetsMake(-30, 0, 0, 0);
     [self.view addSubview:self.tableView];
 }
 
@@ -129,12 +137,12 @@ static char rowStaticRef[] = "row";
         cell.backgroundColor = [UIColor colorWithRed:0.11 green:0.11 blue:0.12 alpha:1.0];
         
         HawaiiRainbowLabel *rainbow = [[HawaiiRainbowLabel alloc] initWithFrame:CGRectMake(55, 11, 280, 24)];
-        rainbow.tag = 888;
+        rainbow.tag = 777;
         rainbow.backgroundColor = [UIColor clearColor];
         [cell.contentView addSubview:rainbow];
     }
     
-    HawaiiRainbowLabel *rainbow = (HawaiiRainbowLabel *)[cell.contentView viewWithTag:888];
+    HawaiiRainbowLabel *rainbow = (HawaiiRainbowLabel *)[cell.contentView viewWithTag:777];
     NSString *displayTitle = [row.title stringByReplacingOccurrencesOfString:@"PekiWare" withString:@"Hawaii"];
     rainbow.text = displayTitle;
     rainbow.font = [UIFont systemFontOfSize:18 weight:UIFontWeightBold];
