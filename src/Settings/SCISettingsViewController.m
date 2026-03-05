@@ -1,6 +1,6 @@
 #import "SCISettingsViewController.h"
 #import "SCISetting.h"
-#import "TweakSettings.h"
+#import "SCITweakSettings.h"
 #import <objc/runtime.h>
 #import <QuartzCore/QuartzCore.h>
 
@@ -18,17 +18,14 @@ static char rowStaticRef[] = "row";
         self.gradientLayer = [CAGradientLayer layer];
         self.gradientLayer.startPoint = CGPointMake(0, 0.5);
         self.gradientLayer.endPoint = CGPointMake(1, 0.5);
-        // Niz duginih boja
         self.gradientLayer.colors = @[
             (id)[UIColor redColor].CGColor, (id)[UIColor orangeColor].CGColor,
             (id)[UIColor yellowColor].CGColor, (id)[UIColor greenColor].CGColor,
             (id)[UIColor cyanColor].CGColor, (id)[UIColor blueColor].CGColor,
             (id)[UIColor purpleColor].CGColor, (id)[UIColor redColor].CGColor
         ];
-        // Koristimo slova kao masku za dugu (OVO SPREČAVA BELE BLOKOVE)
         self.layer.mask = self.gradientLayer;
         
-        // Animacija koja pomera boje kroz slova (Glow efekat)
         CABasicAnimation *anim = [CABasicAnimation animationWithKeyPath:@"colors"];
         anim.toValue = @[
             (id)[UIColor purpleColor].CGColor, (id)[UIColor redColor].CGColor,
@@ -45,20 +42,27 @@ static char rowStaticRef[] = "row";
 }
 @end
 
-// --- GLAVNI VIEW CONTROLLER ---
+// --- DEKLARACIJA INTERFEJSA (OVO REŠAVA "PROPERTY NOT FOUND" GREŠKE) ---
+@interface SCISettingsViewController () <UITableViewDataSource, UITableViewDelegate>
+@property (nonatomic, strong) UITableView *tableView;
+@property (nonatomic, copy) NSArray *sections;
+@property (nonatomic) BOOL reduceMargin;
+@end
+
 @implementation SCISettingsViewController
 
 - (instancetype)initWithTitle:(NSString *)title sections:(NSArray *)sections reduceMargin:(BOOL)reduceMargin {
     self = [super init];
     if (self) {
         self.title = @"Hawaii Settings";
+        self.reduceMargin = reduceMargin;
         
         NSMutableArray *filteredSections = [NSMutableArray new];
         for (NSDictionary *section in sections) {
             NSMutableArray *filteredRows = [NSMutableArray new];
-            for (SCISetting *row in section[@"rows"]) {
+            NSArray *rows = section[@"rows"];
+            for (SCISetting *row in rows) {
                 NSString *rt = [row.title lowercaseString];
-                // Sklanjamo PekiWare originalne linkove da ubacimo naše Hawaii stavke
                 if (![rt containsString:@"donate"] && ![rt containsString:@"view repo"] && 
                     ![rt containsString:@"developer"] && ![rt containsString:@"discord"]) {
                     [filteredRows addObject:row];
@@ -71,7 +75,7 @@ static char rowStaticRef[] = "row";
             }
         }
 
-        // --- RUČNO DODAJEMO DEVELOPER I TIKTOK NA KRAJ ---
+        // DODAJEMO DEVELOPER I TIKTOK NA KRAJ
         SCISetting *devRow = [[SCISetting alloc] init];
         devRow.title = @"Hawaii Developer";
         devRow.subtitle = @"Hawaii Custom Mod";
@@ -81,23 +85,20 @@ static char rowStaticRef[] = "row";
         tkRow.subtitle = @"Join our community!";
 
         [filteredSections addObject:@{@"header":@"", @"rows":@[devRow, tkRow]}];
-
         self.sections = [filteredSections copy];
-        self.reduceMargin = reduceMargin;
     }
     return self;
 }
 
 - (instancetype)init {
-    // Proba da učita sekcije (TweakSettings je ime tvog fajla na slici)
-    return [self initWithTitle:@"Hawaii Settings" sections:[TweakSettings sections] reduceMargin:YES];
+    // ISPRAVLJENO: Koristi SCITweakSettings (kao što piše u logu)
+    return [self initWithTitle:@"Hawaii Settings" sections:[SCITweakSettings sections] reduceMargin:YES];
 }
 
 - (void)viewDidLoad {
     [super viewDidLoad];
     self.view.backgroundColor = [UIColor blackColor];
     
-    // Gradient Naslov u navigaciji (na vrhu ekrana)
     HawaiiRainbowLabel *navLabel = [[HawaiiRainbowLabel alloc] initWithFrame:CGRectMake(0, 0, 200, 44)];
     navLabel.text = self.title;
     navLabel.font = [UIFont systemFontOfSize:19 weight:UIFontWeightBold];
@@ -111,13 +112,15 @@ static char rowStaticRef[] = "row";
     self.tableView.separatorColor = [UIColor colorWithWhite:1.0 alpha:0.1];
     self.tableView.dataSource = self;
     self.tableView.delegate = self;
-    self.tableView.contentInset = UIEdgeInsetsMake(-30, 0, 0, 0);
+    self.tableView.contentInset = UIEdgeInsetsMake(self.reduceMargin ? -30 : 0, 0, 0, 0);
     [self.view addSubview:self.tableView];
 }
 
 - (UITableViewCell *)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)indexPath {
-    SCISetting *row = self.sections[indexPath.section][@"rows"][indexPath.row];
-    
+    NSDictionary *section = self.sections[indexPath.section];
+    NSArray *rows = section[@"rows"];
+    SCISetting *row = rows[indexPath.row];
+
     NSString *cellID = [NSString stringWithFormat:@"HCell-%ld-%ld", (long)indexPath.section, (long)indexPath.row];
     UITableViewCell *cell = [tableView dequeueReusableCellWithIdentifier:cellID];
     
@@ -126,12 +129,12 @@ static char rowStaticRef[] = "row";
         cell.backgroundColor = [UIColor colorWithRed:0.11 green:0.11 blue:0.12 alpha:1.0];
         
         HawaiiRainbowLabel *rainbow = [[HawaiiRainbowLabel alloc] initWithFrame:CGRectMake(55, 11, 280, 24)];
-        rainbow.tag = 555;
+        rainbow.tag = 888;
         rainbow.backgroundColor = [UIColor clearColor];
         [cell.contentView addSubview:rainbow];
     }
     
-    HawaiiRainbowLabel *rainbow = (HawaiiRainbowLabel *)[cell.contentView viewWithTag:555];
+    HawaiiRainbowLabel *rainbow = (HawaiiRainbowLabel *)[cell.contentView viewWithTag:888];
     NSString *displayTitle = [row.title stringByReplacingOccurrencesOfString:@"PekiWare" withString:@"Hawaii"];
     rainbow.text = displayTitle;
     rainbow.font = [UIFont systemFontOfSize:18 weight:UIFontWeightBold];
@@ -161,13 +164,14 @@ static char rowStaticRef[] = "row";
 }
 
 - (void)tableView:(UITableView *)tableView didSelectRowAtIndexPath:(NSIndexPath *)indexPath {
-    SCISetting *row = self.sections[indexPath.section][@"rows"][indexPath.row];
-    
+    NSDictionary *section = self.sections[indexPath.section];
+    NSArray *rows = section[@"rows"];
+    SCISetting *row = rows[indexPath.row];
+
     if ([row.title containsString:@"TikTok"]) {
-        NSURL *url = [NSURL URLWithString:@"https://www.tiktok.com/@ikazika123714"]; 
+        NSURL *url = [NSURL URLWithString:@"https://www.tiktok.com/@zivkovichhh_"]; 
         [[UIApplication sharedApplication] openURL:url options:@{} completionHandler:nil];
-    } 
-    else if (row.navSections.count > 0) {
+    } else if (row.navSections.count > 0) {
         SCISettingsViewController *vc = [[SCISettingsViewController alloc] initWithTitle:row.title sections:row.navSections reduceMargin:NO];
         [self.navigationController pushViewController:vc animated:YES];
     } else if (row.url) {
@@ -177,7 +181,11 @@ static char rowStaticRef[] = "row";
 }
 
 - (NSInteger)numberOfSectionsInTableView:(UITableView *)tableView { return self.sections.count; }
-- (NSInteger)tableView:(UITableView *)tableView numberOfRowsInSection:(NSInteger)section { return [self.sections[section][@"rows"] count]; }
+- (NSInteger)tableView:(UITableView *)tableView numberOfRowsInSection:(NSInteger)section { 
+    NSDictionary *sec = self.sections[section];
+    NSArray *rows = sec[@"rows"];
+    return rows.count; 
+}
 
 - (void)switchChanged:(UISwitch *)sender {
     SCISetting *row = objc_getAssociatedObject(sender, rowStaticRef);
