@@ -1,57 +1,8 @@
 #import "SCISettingsViewController.h"
-#import <QuartzCore/QuartzCore.h>
 #import <objc/runtime.h>
 
 static char rowStaticRef[] = "row";
 
-// --- SPECIJALNA KLASA ZA DUGINU ANIMACIJU (HAWAII STYLE) ---
-@interface HawaiiRainbowLabel : UILabel
-@property (nonatomic, strong) CAGradientLayer *gradientLayer;
-- (void)startRainbowAnimation;
-@end
-
-@implementation HawaiiRainbowLabel
-- (void)layoutSubviews {
-    [super layoutSubviews];
-    self.gradientLayer.frame = CGRectMake(-self.bounds.size.width, 0, 3 * self.bounds.size.width, self.bounds.size.height);
-}
-
-- (void)startRainbowAnimation {
-    if (self.gradientLayer) return;
-
-    self.gradientLayer = [CAGradientLayer layer];
-    // Niz duginih boja
-    self.gradientLayer.colors = @[
-        (id)[UIColor redColor].CGColor,
-        (id)[UIColor orangeColor].CGColor,
-        (id)[UIColor yellowColor].CGColor,
-        (id)[UIColor greenColor].CGColor,
-        (id)[UIColor cyanColor].CGColor,
-        (id)[UIColor blueColor].CGColor,
-        (id)[UIColor purpleColor].CGColor,
-        (id)[UIColor redColor].CGColor
-    ];
-    self.gradientLayer.startPoint = CGPointMake(0, 0.5);
-    self.gradientLayer.endPoint = CGPointMake(1, 0.5);
-    
-    // Pravimo da gradient bude širi od labela da bi mogao da se pomera
-    self.gradientLayer.frame = CGRectMake(-self.bounds.size.width, 0, 3 * self.bounds.size.width, self.bounds.size.height);
-
-    // Animacija pomeranja (pomeramo gradient s leva na desno)
-    CABasicAnimation *animation = [CABasicAnimation animationWithKeyPath:@"position.x"];
-    animation.byValue = @(self.bounds.size.width * 2);
-    animation.duration = 3.0; // Brzina pomeranja boja
-    animation.repeatCount = HUGE_VALF;
-    animation.removedOnCompletion = NO;
-    [self.gradientLayer addAnimation:animation forKey:@"rainbow"];
-
-    // Postavljamo gradient kao masku - boje se vide samo na slovima
-    self.layer.mask = self.gradientLayer;
-    self.backgroundColor = [UIColor whiteColor]; // Osnova za masku
-}
-@end
-
-// --- GLAVNI VIEW CONTROLLER ---
 @interface SCISettingsViewController () <UITableViewDataSource, UITableViewDelegate>
 @property (nonatomic, strong) UITableView *tableView;
 @property (nonatomic, copy) NSArray *sections;
@@ -60,32 +11,49 @@ static char rowStaticRef[] = "row";
 
 @implementation SCISettingsViewController
 
+// Pomoćna funkcija za dobijanje boje na osnovu naslova (kao na slici PekiWare)
+- (UIColor *)colorForTitle:(NSString *)title {
+    NSString *t = [title lowercaseString];
+    if ([t containsString:@"general"]) return [UIColor systemYellowColor];
+    if ([t containsString:@"feed"]) return [UIColor systemGreenColor];
+    if ([t containsString:@"reels"]) return [UIColor colorWithRed:0.40 green:0.95 blue:0.40 alpha:1.0];
+    if ([t containsString:@"saving"]) return [UIColor colorWithRed:0.30 green:0.85 blue:0.70 alpha:1.0];
+    if ([t containsString:@"stories"]) return [UIColor colorWithRed:0.25 green:0.75 blue:0.90 alpha:1.0];
+    if ([t containsString:@"navigation"]) return [UIColor colorWithRed:0.20 green:0.50 blue:1.00 alpha:1.0];
+    if ([t containsString:@"confirm"]) return [UIColor colorWithRed:0.30 green:0.30 blue:1.00 alpha:1.0];
+    if ([t containsString:@"debug"]) return [UIColor systemPurpleColor];
+    if ([t containsString:@"developer"]) return [UIColor systemPinkColor];
+    if ([t containsString:@"discord"]) return [UIColor systemRedColor];
+    
+    return [UIColor whiteColor]; // Default
+}
+
 - (instancetype)initWithTitle:(NSString *)title sections:(NSArray *)sections reduceMargin:(BOOL)reduceMargin {
     self = [super init];
     if (self) {
         self.sections = sections;
         self.reduceMargin = reduceMargin;
-        self.title = @"Hawaii Settings";
+        self.title = title;
     }
     return self;
 }
 
 - (instancetype)init {
-    return [self initWithTitle:@"Hawaii Settings" sections:[SCITweakSettings sections] reduceMargin:YES];
+    return [self initWithTitle:@"PekiWare Settings" sections:[SCITweakSettings sections] reduceMargin:YES];
 }
 
 - (void)viewDidLoad {
     [super viewDidLoad];
 
     self.view.backgroundColor = [UIColor blackColor];
-
-    // Postavljanje animiranog naslova na vrhu (Hawaii Settings)
-    HawaiiRainbowLabel *navLabel = [[HawaiiRainbowLabel alloc] initWithFrame:CGRectMake(0, 0, 200, 44)];
-    navLabel.text = @"Hawaii Settings";
-    navLabel.font = [UIFont systemFontOfSize:19 weight:UIFontWeightBold];
-    navLabel.textAlignment = NSTextAlignmentCenter;
-    [navLabel startRainbowAnimation];
-    self.navigationItem.titleView = navLabel;
+    
+    // Naslov u navigaciji (Žut kao na slici)
+    UILabel *titleLabel = [[UILabel alloc] init];
+    titleLabel.text = self.title;
+    titleLabel.textColor = [UIColor systemYellowColor];
+    titleLabel.font = [UIFont systemFontOfSize:18 weight:UIFontWeightBold];
+    [titleLabel sizeToFit];
+    self.navigationItem.titleView = titleLabel;
 
     self.tableView = [[UITableView alloc] initWithFrame:self.view.bounds style:UITableViewStyleInsetGrouped];
     self.tableView.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
@@ -93,49 +61,48 @@ static char rowStaticRef[] = "row";
     self.tableView.separatorColor = [UIColor colorWithWhite:1.0 alpha:0.1];
     self.tableView.dataSource = self;
     self.tableView.delegate = self;
-    self.tableView.contentInset = UIEdgeInsetsMake(self.reduceMargin ? -30 : -10, 0, 0, 0);
+    
+    // Smanjujemo razmak gore
+    self.tableView.contentInset = UIEdgeInsetsMake(self.reduceMargin ? -20 : 0, 0, 0, 0);
 
     [self.view addSubview:self.tableView];
 }
 
 - (UITableViewCell *)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)indexPath {
     SCISetting *row = self.sections[indexPath.section][@"rows"][indexPath.row];
-    UITableViewCell *cell = [[UITableViewCell alloc] initWithStyle:UITableViewCellStyleSubtitle reuseIdentifier:nil];
+    
+    // Koristimo standardni ID da bi iOS sam hendlovao labelu i izbegli bele kocke
+    static NSString *cellID = @"SCICell";
+    UITableViewCell *cell = [tableView dequeueReusableCellWithIdentifier:cellID];
+    if (!cell) {
+        cell = [[UITableViewCell alloc] initWithStyle:UITableViewCellStyleSubtitle reuseIdentifier:cellID];
+    }
     
     cell.backgroundColor = [UIColor colorWithRed:0.11 green:0.11 blue:0.12 alpha:1.0];
     cell.selectionStyle = UITableViewCellSelectionStyleDefault;
+    
+    // Boja za ovaj red
+    UIColor *rowColor = [self colorForTitle:row.title];
 
-    // Kreiranje duginih slova za svaku stavku (Hawaii Style)
-    HawaiiRainbowLabel *rainbowLabel = [[HawaiiRainbowLabel alloc] initWithFrame:CGRectMake(55, 12, 250, 22)];
-    rainbowLabel.text = row.title;
-    rainbowLabel.font = [UIFont systemFontOfSize:17 weight:UIFontWeightMedium];
-    [rainbowLabel startRainbowAnimation];
-    [cell.contentView addSubview:rainbowLabel];
+    // Glavni tekst
+    cell.textLabel.text = row.title;
+    cell.textLabel.textColor = rowColor;
+    cell.textLabel.font = [UIFont systemFontOfSize:17 weight:UIFontWeightMedium];
 
-    // Ikona (Bela ikona)
+    // Podnaslov
+    cell.detailTextLabel.text = row.subtitle;
+    cell.detailTextLabel.textColor = [UIColor orangeColor];
+    cell.detailTextLabel.font = [UIFont systemFontOfSize:12];
+
+    // Ikona
     if (row.icon != nil) {
-        UIImageView *iconView = [[UIImageView alloc] initWithImage:[row.icon image]];
-        iconView.tintColor = [UIColor whiteColor];
-        iconView.frame = CGRectMake(15, 11, 28, 28);
-        iconView.contentMode = UIViewContentModeScaleAspectFit;
-        [cell.contentView addSubview:iconView];
+        cell.imageView.image = [row.icon image];
+        cell.imageView.tintColor = [UIColor whiteColor];
+    } else {
+        cell.imageView.image = nil;
     }
 
-    // Subtitle (Narandžasta boja)
-    if (row.subtitle.length) {
-        UILabel *subLabel = [[UILabel alloc] initWithFrame:CGRectMake(55, 32, 250, 15)];
-        subLabel.text = row.subtitle;
-        subLabel.font = [UIFont systemFontOfSize:12];
-        subLabel.textColor = [UIColor orangeColor];
-        [cell.contentView addSubview:subLabel];
-        
-        // Pomera glavni naslov malo gore ako ima podnaslova
-        CGRect frame = rainbowLabel.frame;
-        frame.origin.y = 8;
-        rainbowLabel.frame = frame;
-    }
-
-    // Kontrole (Switch, Stepper...)
+    // Kontrole (Switch)
     if (row.type == SCITableCellSwitch) {
         UISwitch *toggle = [UISwitch new];
         toggle.on = [[NSUserDefaults standardUserDefaults] boolForKey:row.defaultsKey];
@@ -144,6 +111,7 @@ static char rowStaticRef[] = "row";
         [toggle addTarget:self action:@selector(switchChanged:) forControlEvents:UIControlEventValueChanged];
         cell.accessoryView = toggle;
     } else {
+        cell.accessoryView = nil;
         cell.accessoryType = UITableViewCellAccessoryDisclosureIndicator;
     }
 
@@ -152,8 +120,6 @@ static char rowStaticRef[] = "row";
 
 - (NSInteger)numberOfSectionsInTableView:(UITableView *)tableView { return self.sections.count; }
 - (NSInteger)tableView:(UITableView *)tableView numberOfRowsInSection:(NSInteger)section { return [self.sections[section][@"rows"] count]; }
-- (NSString *)tableView:(UITableView *)tableView titleForHeaderInSection:(NSInteger)section { return self.sections[section][@"header"]; }
-- (NSString *)tableView:(UITableView *)tableView titleForFooterInSection:(NSInteger)section { return self.sections[section][@"footer"]; }
 
 - (void)tableView:(UITableView *)tableView didSelectRowAtIndexPath:(NSIndexPath *)indexPath {
     SCISetting *row = self.sections[indexPath.section][@"rows"][indexPath.row];
