@@ -5,7 +5,7 @@
 
 static char rowStaticRef[] = "row";
 
-// --- KLASA ZA PRAVI RAINBOW TEKST (SVAKO SLOVO DRUGA BOJA - KAO NA VIDEU) ---
+// --- KLASA ZA PRAVI RAINBOW TEKST (SVAKO SLOVO DRUGA BOJA) ---
 @interface HawaiiRainbowLabel : UILabel
 @property (nonatomic, strong) CAGradientLayer *gradientLayer;
 @end
@@ -17,17 +17,18 @@ static char rowStaticRef[] = "row";
         self.gradientLayer = [CAGradientLayer layer];
         self.gradientLayer.startPoint = CGPointMake(0, 0.5);
         self.gradientLayer.endPoint = CGPointMake(1, 0.5);
-        // Duga boje (Red, Orange, Yellow, Green, Cyan, Blue, Purple)
+        // Duga boje
         self.gradientLayer.colors = @[
             (id)[UIColor redColor].CGColor, (id)[UIColor orangeColor].CGColor,
             (id)[UIColor yellowColor].CGColor, (id)[UIColor greenColor].CGColor,
             (id)[UIColor cyanColor].CGColor, (id)[UIColor blueColor].CGColor,
             (id)[UIColor purpleColor].CGColor, (id)[UIColor redColor].CGColor
         ];
-        // Koristimo slova kao masku za dugu (OVO SPREČAVA BELE BLOKOVE)
+        
+        // Magija: Slova postaju maska za dugu
         self.layer.mask = self.gradientLayer;
         
-        // Animacija koja pomera boje kroz slova (Glow efekat)
+        // Animacija pomeranja boja (ISPRAVLJENO: CABasicAnimation)
         CABasicAnimation *anim = [CABasicAnimation animationWithKeyPath:@"colors"];
         anim.toValue = @[
             (id)[UIColor purpleColor].CGColor, (id)[UIColor redColor].CGColor,
@@ -50,7 +51,6 @@ static char rowStaticRef[] = "row";
 - (instancetype)initWithTitle:(NSString *)title sections:(NSArray *)sections reduceMargin:(BOOL)reduceMargin {
     self = [super init];
     if (self) {
-        // Uvek piše Hawaii Settings na vrhu
         self.title = @"Hawaii Settings";
         
         NSMutableArray *filteredSections = [NSMutableArray new];
@@ -58,7 +58,7 @@ static char rowStaticRef[] = "row";
             NSMutableArray *filteredRows = [NSMutableArray new];
             for (SCISetting *row in section[@"rows"]) {
                 NSString *rt = [row.title lowercaseString];
-                // Sklanjamo PekiWare originalne linkove
+                // Sklanjamo originalne linkove
                 if (![rt containsString:@"donate"] && ![rt containsString:@"view repo"] && 
                     ![rt containsString:@"developer"] && ![rt containsString:@"discord"]) {
                     [filteredRows addObject:row];
@@ -71,7 +71,7 @@ static char rowStaticRef[] = "row";
             }
         }
 
-        // --- RUČNO DODAJEMO DEVELOPER I TIKTOK NA KRAJ LISTE ---
+        // --- RUČNO DODAJEMO DEVELOPER I TIKTOK NA KRAJ ---
         SCISetting *devRow = [SCISetting new];
         devRow.title = @"Hawaii Developer";
         devRow.subtitle = @"Hawaii Custom Mod";
@@ -92,7 +92,7 @@ static char rowStaticRef[] = "row";
     [super viewDidLoad];
     self.view.backgroundColor = [UIColor blackColor];
     
-    // Gradient Naslov u navigaciji (na vrhu ekrana)
+    // Gradient Naslov na vrhu
     HawaiiRainbowLabel *navLabel = [[HawaiiRainbowLabel alloc] initWithFrame:CGRectMake(0, 0, 200, 44)];
     navLabel.text = self.title;
     navLabel.font = [UIFont systemFontOfSize:19 weight:UIFontWeightBold];
@@ -112,40 +112,34 @@ static char rowStaticRef[] = "row";
 
 - (UITableViewCell *)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)indexPath {
     SCISetting *row = self.sections[indexPath.section][@"rows"][indexPath.row];
-    
-    // Unikatni ID da ne bi dolazilo do preklapanja teksta pri skrolovanju
     NSString *cellID = [NSString stringWithFormat:@"HCell-%ld-%ld", (long)indexPath.section, (long)indexPath.row];
-    UITableViewCell *cell = [tableView dequeueReusableCellWithIdentifier:cellID];
     
+    UITableViewCell *cell = [tableView dequeueReusableCellWithIdentifier:cellID];
     if (!cell) {
         cell = [[UITableViewCell alloc] initWithStyle:UITableViewCellStyleSubtitle reuseIdentifier:cellID];
         cell.backgroundColor = [UIColor colorWithRed:0.11 green:0.11 blue:0.12 alpha:1.0];
         
-        // Naš Hawaii šareni tekst
         HawaiiRainbowLabel *rainbow = [[HawaiiRainbowLabel alloc] initWithFrame:CGRectMake(55, 11, 280, 24)];
-        rainbow.tag = 999;
+        rainbow.tag = 555;
         rainbow.backgroundColor = [UIColor clearColor];
         [cell.contentView addSubview:rainbow];
     }
     
-    HawaiiRainbowLabel *rainbow = (HawaiiRainbowLabel *)[cell.contentView viewWithTag:999];
-    // Menjamo PekiWare rečju Hawaii automatski
-    NSString *displayTitle = [row.title stringByReplacingOccurrencesOfString:@"PekiWare" withString:@"Hawaii"];
-    rainbow.text = displayTitle;
+    HawaiiRainbowLabel *rainbow = (HawaiiRainbowLabel *)[cell.contentView viewWithTag:555];
+    NSString *title = [row.title stringByReplacingOccurrencesOfString:@"PekiWare" withString:@"Hawaii"];
+    rainbow.text = title;
     rainbow.font = [UIFont systemFontOfSize:18 weight:UIFontWeightBold];
 
     cell.detailTextLabel.text = row.subtitle;
     cell.detailTextLabel.textColor = [UIColor orangeColor];
     cell.detailTextLabel.font = [UIFont systemFontOfSize:13];
-    cell.textLabel.text = @""; // Sakrivamo sistemski tekst da ostane samo naš Rainbow
+    cell.textLabel.text = @""; 
 
-    // Ikone
     if (row.icon != nil) {
         cell.imageView.image = [row.icon image];
         cell.imageView.tintColor = [UIColor whiteColor];
     }
 
-    // Switch prekidači (Ghost mode, Hide Ads...)
     if (row.type == 1) { 
         UISwitch *toggle = [UISwitch new];
         toggle.on = [[NSUserDefaults standardUserDefaults] boolForKey:row.defaultsKey];
@@ -157,19 +151,15 @@ static char rowStaticRef[] = "row";
         cell.accessoryView = nil;
         cell.accessoryType = UITableViewCellAccessoryDisclosureIndicator;
     }
-
     return cell;
 }
 
 - (void)tableView:(UITableView *)tableView didSelectRowAtIndexPath:(NSIndexPath *)indexPath {
     SCISetting *row = self.sections[indexPath.section][@"rows"][indexPath.row];
-    
     if ([row.title containsString:@"TikTok"]) {
-        // Tvoj TikTok link
         NSURL *url = [NSURL URLWithString:@"https://www.tiktok.com/@ikazika123714"]; 
         [[UIApplication sharedApplication] openURL:url options:@{} completionHandler:nil];
-    } 
-    else if (row.navSections.count > 0) {
+    } else if (row.navSections.count > 0) {
         SCISettingsViewController *vc = [[SCISettingsViewController alloc] initWithTitle:row.title sections:row.navSections reduceMargin:NO];
         [self.navigationController pushViewController:vc animated:YES];
     } else if (row.url) {
@@ -185,6 +175,4 @@ static char rowStaticRef[] = "row";
     SCISetting *row = objc_getAssociatedObject(sender, rowStaticRef);
     [[NSUserDefaults standardUserDefaults] setBool:sender.isOn forKey:row.defaultsKey];
 }
-
 @end
-// Final Build Trigger
