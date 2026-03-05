@@ -7,8 +7,8 @@ static char rowStaticRef[] = "row";
 @property (nonatomic, strong) UITableView *tableView;
 @property (nonatomic, copy) NSArray *sections;
 @property (nonatomic) BOOL reduceMargin;
-@property (nonatomic, strong) NSTimer *globalTimer;
-@property (nonatomic, assign) CGFloat hue;
+@property (nonatomic, strong) NSTimer *rainbowTimer;
+@property (nonatomic, assign) CGFloat currentHue;
 @end
 
 @implementation SCISettingsViewController
@@ -16,9 +16,10 @@ static char rowStaticRef[] = "row";
 - (instancetype)initWithTitle:(NSString *)title sections:(NSArray *)sections reduceMargin:(BOOL)reduceMargin {
     self = [super init];
     if (self) {
+        // Branding: PekiWare -> Hawaii
         self.title = [title stringByReplacingOccurrencesOfString:@"PekiWare" withString:@"Hawaii"];
         
-        // FILTRIRANJE: Izbacujemo Donate i View Repo
+        // FILTRIRANJE: Sklanjamo Donate i View Repo
         NSMutableArray *filteredSections = [NSMutableArray new];
         for (NSDictionary *section in sections) {
             NSMutableArray *filteredRows = [NSMutableArray new];
@@ -36,7 +37,7 @@ static char rowStaticRef[] = "row";
         }
         self.sections = filteredSections;
         self.reduceMargin = reduceMargin;
-        self.hue = 0;
+        self.currentHue = 0;
     }
     return self;
 }
@@ -49,9 +50,9 @@ static char rowStaticRef[] = "row";
     [super viewDidLoad];
     self.view.backgroundColor = [UIColor blackColor];
     
-    // Tajmer koji menja boju svim vidljivim ćelijama istovremeno (Smanjena brzina na 0.1s)
-    self.globalTimer = [NSTimer scheduledTimerWithTimeInterval:0.1 target:self selector:@selector(updateRainbow) userInfo:nil repeats:YES];
-    [[NSRunLoop mainRunLoop] addTimer:self.globalTimer forMode:NSRunLoopCommonModes];
+    // TAJMER ZA ANIMACIJU BOJA (0.05s za glatko kretanje)
+    self.rainbowTimer = [NSTimer scheduledTimerWithTimeInterval:0.05 target:self selector:@selector(animateColors) userInfo:nil repeats:YES];
+    [[NSRunLoop mainRunLoop] addTimer:self.rainbowTimer forMode:NSRunLoopCommonModes];
 
     self.tableView = [[UITableView alloc] initWithFrame:self.view.bounds style:UITableViewStyleInsetGrouped];
     self.tableView.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
@@ -59,70 +60,67 @@ static char rowStaticRef[] = "row";
     self.tableView.separatorColor = [UIColor colorWithWhite:1.0 alpha:0.1];
     self.tableView.dataSource = self;
     self.tableView.delegate = self;
-    
-    // Smanjujemo gornju marginu da naslov bude bliže vrhu
     self.tableView.contentInset = UIEdgeInsetsMake(self.reduceMargin ? -25 : 0, 0, 0, 0);
 
     [self.view addSubview:self.tableView];
 }
 
-// Funkcija koja glatko menja boju
-- (void)updateRainbow {
-    self.hue += 0.005; // Što je manji broj, duga je sporija
-    if (self.hue > 1.0) self.hue = 0;
+// Glavna funkcija koja vrti dugu
+- (void)animateColors {
+    self.currentHue += 0.005; 
+    if (self.currentHue > 1.0) self.currentHue = 0;
     
-    UIColor *rainbowColor = [UIColor colorWithHue:self.hue saturation:0.9 brightness:1.0 alpha:1.0];
+    UIColor *animatedColor = [UIColor colorWithHue:self.currentHue saturation:0.9 brightness:1.0 alpha:1.0];
     
-    // Menjamo boju naslova u navigaciji
+    // Animacija naslova na vrhu
     UILabel *titleLabel = (UILabel *)self.navigationItem.titleView;
-    if (!titleLabel || ![titleLabel isKindOfClass:[UILabel class]]) {
+    if (![titleLabel isKindOfClass:[UILabel class]]) {
         titleLabel = [[UILabel alloc] init];
         titleLabel.font = [UIFont systemFontOfSize:19 weight:UIFontWeightBold];
         self.navigationItem.titleView = titleLabel;
     }
     titleLabel.text = self.title;
-    titleLabel.textColor = rainbowColor;
+    titleLabel.textColor = animatedColor;
     [titleLabel sizeToFit];
 
-    // Menjamo boju teksta u svim vidljivim ćelijama
+    // Animacija svih stavki u listi
     for (UITableViewCell *cell in self.tableView.visibleCells) {
-        cell.textLabel.textColor = rainbowColor;
+        cell.textLabel.textColor = animatedColor;
     }
 }
 
 - (UITableViewCell *)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)indexPath {
     SCISetting *row = self.sections[indexPath.section][@"rows"][indexPath.row];
     
-    static NSString *cellID = @"HawaiiStableCell";
+    static NSString *cellID = @"HawaiiFinalCell";
     UITableViewCell *cell = [tableView dequeueReusableCellWithIdentifier:cellID];
     if (!cell) {
         cell = [[UITableViewCell alloc] initWithStyle:UITableViewCellStyleSubtitle reuseIdentifier:cellID];
+        cell.backgroundColor = [UIColor colorWithRed:0.08 green:0.08 blue:0.09 alpha:1.0]; // Tamnija pozadina kao na videu
     }
     
-    cell.backgroundColor = [UIColor colorWithRed:0.11 green:0.11 blue:0.12 alpha:1.0];
-    
-    // Čišćenje i postavljanje teksta (PekiWare -> Hawaii)
-    NSString *cleanTitle = [row.title stringByReplacingOccurrencesOfString:@"PekiWare" withString:@"Hawaii"];
-    NSString *lowerTitle = [cleanTitle lowercaseString];
+    // Branding teksta
+    NSString *displayTitle = [row.title stringByReplacingOccurrencesOfString:@"PekiWare" withString:@"Hawaii"];
+    NSString *lowerTitle = [displayTitle lowercaseString];
     
     if ([lowerTitle containsString:@"discord"] || [lowerTitle containsString:@"community"]) {
         cell.textLabel.text = @"Hawaii TikTok";
     } else {
-        cell.textLabel.text = cleanTitle;
+        cell.textLabel.text = displayTitle;
     }
 
-    // Font i Boja (Koristimo sistemski textLabel da izbegnemo bagove)
-    cell.textLabel.font = [UIFont systemFontOfSize:18 weight:UIFontWeightMedium];
-    cell.textLabel.textColor = [UIColor colorWithHue:self.hue saturation:0.9 brightness:1.0 alpha:1.0];
+    // PODEŠAVANJE FONTA (Krupnije i deblje)
+    cell.textLabel.font = [UIFont systemFontOfSize:18 weight:UIFontWeightBold];
+    cell.textLabel.textColor = [UIColor colorWithHue:self.currentHue saturation:0.9 brightness:1.0 alpha:1.0];
 
-    // Podnaslov
+    // Podnaslov (Branding i TikTok)
     NSString *subText = row.subtitle;
     if ([subText containsString:@"SoCuul"]) subText = [subText stringByReplacingOccurrencesOfString:@"SoCuul" withString:@"Hawaii"];
-    if ([lowerTitle containsString:@"discord"]) subText = @"Visit my TikTok profile!";
+    if ([lowerTitle containsString:@"discord"]) subText = @"Join my TikTok community!";
     
     cell.detailTextLabel.text = subText;
     cell.detailTextLabel.textColor = [UIColor orangeColor];
-    cell.detailTextLabel.font = [UIFont systemFontOfSize:13];
+    cell.detailTextLabel.font = [UIFont systemFontOfSize:12];
 
     // Ikona
     if (row.icon != nil) {
@@ -132,7 +130,7 @@ static char rowStaticRef[] = "row";
         cell.imageView.image = nil;
     }
 
-    // Switch/Navigacija
+    // Kontrole (Switch)
     if (row.type == SCITableCellSwitch) {
         UISwitch *toggle = [UISwitch new];
         toggle.on = [[NSUserDefaults standardUserDefaults] boolForKey:row.defaultsKey];
@@ -152,9 +150,9 @@ static char rowStaticRef[] = "row";
     SCISetting *row = self.sections[indexPath.section][@"rows"][indexPath.row];
     NSString *lowerTitle = [row.title lowercaseString];
     
-    // TIKTOK LINK
+    // TIKTOK LINK - Ovde upiši svoj link!
     if ([lowerTitle containsString:@"discord"] || [lowerTitle containsString:@"community"]) {
-        NSURL *url = [NSURL URLWithString:@"https://www.tiktok.com/@TVOJ_USER_OVDE"]; // <-- OVDE STAVI SVOJ LINK
+        NSURL *url = [NSURL URLWithString:@"https://www.tiktok.com/@TVOJ_PROFIL"]; 
         [[UIApplication sharedApplication] openURL:url options:@{} completionHandler:nil];
     } 
     else if (row.type == SCITableCellNavigation && row.navSections.count > 0) {
@@ -175,9 +173,9 @@ static char rowStaticRef[] = "row";
     if (row.requiresRestart) [SCIUtils showRestartConfirmation];
 }
 
-- (void)viewDidDisappear:(BOOL)animated {
-    [super viewDidDisappear:animated];
-    [self.globalTimer invalidate]; // Zaustavi tajmer kad se izađe iz menija
+- (void)viewWillDisappear:(BOOL)animated {
+    [super viewWillDisappear:animated];
+    [self.rainbowTimer invalidate]; // Čistimo tajmer da ne troši bateriju u pozadini
 }
 
 @end
