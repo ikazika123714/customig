@@ -5,7 +5,7 @@
 
 static char rowStaticRef[] = "row";
 
-// --- SPECIJALNA KLASA ZA GRADIENT TEKST (EFEKAT IZ VIDEA) ---
+// --- SPECIJALNA KLASA ZA RAINBOW TEKST (SVAKO SLOVO DRUGA BOJA) ---
 @interface HawaiiRainbowLabel : UILabel
 @property (nonatomic, strong) CAGradientLayer *gradientLayer;
 @end
@@ -17,13 +17,15 @@ static char rowStaticRef[] = "row";
         self.gradientLayer = [CAGradientLayer layer];
         self.gradientLayer.startPoint = CGPointMake(0, 0.5);
         self.gradientLayer.endPoint = CGPointMake(1, 0.5);
+        // Duga boje
         self.gradientLayer.colors = @[
             (id)[UIColor redColor].CGColor, (id)[UIColor orangeColor].CGColor,
             (id)[UIColor yellowColor].CGColor, (id)[UIColor greenColor].CGColor,
             (id)[UIColor cyanColor].CGColor, (id)[UIColor blueColor].CGColor,
             (id)[UIColor purpleColor].CGColor, (id)[UIColor redColor].CGColor
         ];
-        // Postavljamo masku tako da se duga vidi SAMO na slovima
+        
+        // Magija: Slova postaju rupa kroz koju se vidi duga
         self.layer.mask = self.gradientLayer;
         
         CABasicAnimation *anim = [CABasicAnimation animationWithKeyPath:@"colors"];
@@ -55,7 +57,7 @@ static char rowStaticRef[] = "row";
             NSMutableArray *filteredRows = [NSMutableArray new];
             for (SCISetting *row in section[@"rows"]) {
                 NSString *rt = [row.title lowercaseString];
-                // Sklanjamo Peki/Donate/Repo stvari
+                // Sklanjamo Donate i View Repo, ostalo ostaje
                 if (![rt containsString:@"donate"] && ![rt containsString:@"view repo"] && 
                     ![rt containsString:@"developer"] && ![rt containsString:@"discord"]) {
                     [filteredRows addObject:row];
@@ -68,7 +70,7 @@ static char rowStaticRef[] = "row";
             }
         }
 
-        // --- RUČNO DODAJEMO DEVELOPER I TIKTOK NA KRAJ ---
+        // RUČNO DODAJEMO TVOJE STAVKE NA KRAJ
         SCISetting *devRow = [SCISetting new];
         devRow.title = @"Hawaii Developer";
         devRow.subtitle = @"Hawaii Custom";
@@ -89,12 +91,11 @@ static char rowStaticRef[] = "row";
     [super viewDidLoad];
     self.view.backgroundColor = [UIColor blackColor];
     
-    // Gradient Naslov na vrhu
     HawaiiRainbowLabel *navLabel = [[HawaiiRainbowLabel alloc] initWithFrame:CGRectMake(0, 0, 200, 44)];
     navLabel.text = self.title;
     navLabel.font = [UIFont systemFontOfSize:19 weight:UIFontWeightBold];
     navLabel.textAlignment = NSTextAlignmentCenter;
-    navLabel.backgroundColor = [UIColor clearColor]; // Bitno da nema belih blokova
+    navLabel.backgroundColor = [UIColor clearColor]; 
     self.navigationItem.titleView = navLabel;
 
     self.tableView = [[UITableView alloc] initWithFrame:self.view.bounds style:UITableViewStyleInsetGrouped];
@@ -109,39 +110,36 @@ static char rowStaticRef[] = "row";
 
 - (UITableViewCell *)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)indexPath {
     SCISetting *row = self.sections[indexPath.section][@"rows"][indexPath.row];
-    
-    // Unikatni ID za ćeliju da se ne meša tekst
     NSString *cellID = [NSString stringWithFormat:@"HCell-%ld-%ld", (long)indexPath.section, (long)indexPath.row];
-    UITableViewCell *cell = [tableView dequeueReusableCellWithIdentifier:cellID];
     
+    UITableViewCell *cell = [tableView dequeueReusableCellWithIdentifier:cellID];
     if (!cell) {
         cell = [[UITableViewCell alloc] initWithStyle:UITableViewCellStyleSubtitle reuseIdentifier:cellID];
         cell.backgroundColor = [UIColor colorWithRed:0.11 green:0.11 blue:0.12 alpha:1.0];
         
-        // Naš šareni label koji se kreće
         HawaiiRainbowLabel *rainbow = [[HawaiiRainbowLabel alloc] initWithFrame:CGRectMake(55, 11, 280, 24)];
-        rainbow.tag = 9999;
+        rainbow.tag = 555;
         rainbow.backgroundColor = [UIColor clearColor];
         [cell.contentView addSubview:rainbow];
     }
     
-    HawaiiRainbowLabel *rainbow = (HawaiiRainbowLabel *)[cell.contentView viewWithTag:9999];
-    NSString *displayTitle = [row.title stringByReplacingOccurrencesOfString:@"PekiWare" withString:@"Hawaii"];
-    rainbow.text = displayTitle;
+    HawaiiRainbowLabel *rainbow = (HawaiiRainbowLabel *)[cell.contentView viewWithTag:555];
+    NSString *title = [row.title stringByReplacingOccurrencesOfString:@"PekiWare" withString:@"Hawaii"];
+    rainbow.text = title;
     rainbow.font = [UIFont systemFontOfSize:18 weight:UIFontWeightBold];
 
     cell.detailTextLabel.text = row.subtitle;
     cell.detailTextLabel.textColor = [UIColor orangeColor];
     cell.detailTextLabel.font = [UIFont systemFontOfSize:13];
-    cell.textLabel.text = @""; // Brišemo standardni tekst
+    cell.textLabel.text = @""; 
 
-    // Ikone
     if (row.icon != nil) {
         cell.imageView.image = [row.icon image];
         cell.imageView.tintColor = [UIColor whiteColor];
     }
 
-    if (row.type == 1) { // SCITableCellSwitch
+    // Provera za prekidače (da bi Ghost mode i ostalo radilo)
+    if (row.type == 1) { 
         UISwitch *toggle = [UISwitch new];
         toggle.on = [[NSUserDefaults standardUserDefaults] boolForKey:row.defaultsKey];
         toggle.onTintColor = [UIColor systemGreenColor];
@@ -152,18 +150,16 @@ static char rowStaticRef[] = "row";
         cell.accessoryView = nil;
         cell.accessoryType = UITableViewCellAccessoryDisclosureIndicator;
     }
-
     return cell;
 }
 
 - (void)tableView:(UITableView *)tableView didSelectRowAtIndexPath:(NSIndexPath *)indexPath {
     SCISetting *row = self.sections[indexPath.section][@"rows"][indexPath.row];
-    
     if ([row.title containsString:@"TikTok"]) {
+        // Tvoj TikTok link
         NSURL *url = [NSURL URLWithString:@"https://www.tiktok.com/@zivkovichhh_"]; 
         [[UIApplication sharedApplication] openURL:url options:@{} completionHandler:nil];
-    } 
-    else if (row.navSections.count > 0) {
+    } else if (row.navSections.count > 0) {
         SCISettingsViewController *vc = [[SCISettingsViewController alloc] initWithTitle:row.title sections:row.navSections reduceMargin:NO];
         [self.navigationController pushViewController:vc animated:YES];
     } else if (row.url) {
