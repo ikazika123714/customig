@@ -5,7 +5,7 @@
 
 static char rowStaticRef[] = "row";
 
-// --- KLASA ZA PRAVI RAINBOW TEKST (SVAKO SLOVO DRUGA BOJA) ---
+// --- KLASA ZA PRAVI RAINBOW TEKST (EFEKAT IZ VIDEA) ---
 @interface HawaiiRainbowLabel : UILabel
 @property (nonatomic, strong) CAGradientLayer *gradientLayer;
 @end
@@ -17,7 +17,6 @@ static char rowStaticRef[] = "row";
         self.gradientLayer = [CAGradientLayer layer];
         self.gradientLayer.startPoint = CGPointMake(0, 0.5);
         self.gradientLayer.endPoint = CGPointMake(1, 0.5);
-        // Duga boje
         self.gradientLayer.colors = @[
             (id)[UIColor redColor].CGColor, (id)[UIColor orangeColor].CGColor,
             (id)[UIColor yellowColor].CGColor, (id)[UIColor greenColor].CGColor,
@@ -25,10 +24,10 @@ static char rowStaticRef[] = "row";
             (id)[UIColor purpleColor].CGColor, (id)[UIColor redColor].CGColor
         ];
         
-        // Magija: Slova postaju maska za dugu
+        // Tekst služi kao maska kroz koju se vidi duga
         self.layer.mask = self.gradientLayer;
         
-        // Animacija pomeranja boja (ISPRAVLJENO: CABasicAnimation)
+        // Animacija pomeranja boja
         CABasicAnimation *anim = [CABasicAnimation animationWithKeyPath:@"colors"];
         anim.toValue = @[
             (id)[UIColor purpleColor].CGColor, (id)[UIColor redColor].CGColor,
@@ -45,7 +44,6 @@ static char rowStaticRef[] = "row";
 }
 @end
 
-// --- GLAVNI VIEW CONTROLLER ---
 @implementation SCISettingsViewController
 
 - (instancetype)initWithTitle:(NSString *)title sections:(NSArray *)sections reduceMargin:(BOOL)reduceMargin {
@@ -58,7 +56,6 @@ static char rowStaticRef[] = "row";
             NSMutableArray *filteredRows = [NSMutableArray new];
             for (SCISetting *row in section[@"rows"]) {
                 NSString *rt = [row.title lowercaseString];
-                // Sklanjamo originalne linkove
                 if (![rt containsString:@"donate"] && ![rt containsString:@"view repo"] && 
                     ![rt containsString:@"developer"] && ![rt containsString:@"discord"]) {
                     [filteredRows addObject:row];
@@ -71,14 +68,14 @@ static char rowStaticRef[] = "row";
             }
         }
 
-        // --- RUČNO DODAJEMO DEVELOPER I TIKTOK NA KRAJ ---
+        // Ručno dodavanje Hawaii opcija na dno
         SCISetting *devRow = [SCISetting new];
         devRow.title = @"Hawaii Developer";
         devRow.subtitle = @"Hawaii Custom Mod";
         
         SCISetting *tkRow = [SCISetting new];
         tkRow.title = @"Hawaii TikTok";
-        tkRow.subtitle = @"Join our community!";
+        tkRow.subtitle = @"Join the community!";
 
         [filteredSections addObject:@{@"header":@"", @"rows":@[devRow, tkRow]}];
 
@@ -92,7 +89,6 @@ static char rowStaticRef[] = "row";
     [super viewDidLoad];
     self.view.backgroundColor = [UIColor blackColor];
     
-    // Gradient Naslov na vrhu
     HawaiiRainbowLabel *navLabel = [[HawaiiRainbowLabel alloc] initWithFrame:CGRectMake(0, 0, 200, 44)];
     navLabel.text = self.title;
     navLabel.font = [UIFont systemFontOfSize:19 weight:UIFontWeightBold];
@@ -120,14 +116,13 @@ static char rowStaticRef[] = "row";
         cell.backgroundColor = [UIColor colorWithRed:0.11 green:0.11 blue:0.12 alpha:1.0];
         
         HawaiiRainbowLabel *rainbow = [[HawaiiRainbowLabel alloc] initWithFrame:CGRectMake(55, 11, 280, 24)];
-        rainbow.tag = 555;
+        rainbow.tag = 999;
         rainbow.backgroundColor = [UIColor clearColor];
         [cell.contentView addSubview:rainbow];
     }
     
-    HawaiiRainbowLabel *rainbow = (HawaiiRainbowLabel *)[cell.contentView viewWithTag:555];
-    NSString *title = [row.title stringByReplacingOccurrencesOfString:@"PekiWare" withString:@"Hawaii"];
-    rainbow.text = title;
+    HawaiiRainbowLabel *rainbow = (HawaiiRainbowLabel *)[cell.contentView viewWithTag:999];
+    rainbow.text = [row.title stringByReplacingOccurrencesOfString:@"PekiWare" withString:@"Hawaii"];
     rainbow.font = [UIFont systemFontOfSize:18 weight:UIFontWeightBold];
 
     cell.detailTextLabel.text = row.subtitle;
@@ -157,7 +152,7 @@ static char rowStaticRef[] = "row";
 - (void)tableView:(UITableView *)tableView didSelectRowAtIndexPath:(NSIndexPath *)indexPath {
     SCISetting *row = self.sections[indexPath.section][@"rows"][indexPath.row];
     if ([row.title containsString:@"TikTok"]) {
-        NSURL *url = [NSURL URLWithString:@"https://www.tiktok.com/@ikazika123714"]; 
+        NSURL *url = [NSURL URLWithString:@"https://www.tiktok.com/@zivkovichhh_"]; 
         [[UIApplication sharedApplication] openURL:url options:@{} completionHandler:nil];
     } else if (row.navSections.count > 0) {
         SCISettingsViewController *vc = [[SCISettingsViewController alloc] initWithTitle:row.title sections:row.navSections reduceMargin:NO];
