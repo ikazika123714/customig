@@ -46,7 +46,7 @@ static char rowStaticRef[] = "row";
 @interface SCISettingsViewController () <UITableViewDataSource, UITableViewDelegate>
 @property (nonatomic, strong) UITableView *tableView;
 @property (nonatomic, copy) NSArray *sections;
-@property (nonatomic) BOOL reduceMargin;
+@property (nonatomic, assign) BOOL reduceMargin;
 @end
 
 @implementation SCISettingsViewController
