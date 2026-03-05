@@ -1,14 +1,58 @@
 #import "SCISettingsViewController.h"
 #import <objc/runtime.h>
+#import <QuartzCore/QuartzCore.h>
 
 static char rowStaticRef[] = "row";
 
+// --- SPECIJALNA KLASA ZA GRADIENT TEKST (SVAKO SLOVO DRUGA BOJA) ---
+@interface HawaiiGradientLabel : UILabel
+@property (nonatomic, strong) CAGradientLayer *gradientLayer;
+@end
+
+@implementation HawaiiGradientLabel
+- (void)layoutSubviews {
+    [super layoutSubviews];
+    if (!self.gradientLayer) {
+        self.gradientLayer = [CAGradientLayer layer];
+        self.gradientLayer.startPoint = CGPointMake(0, 0.5);
+        self.gradientLayer.endPoint = CGPointMake(1, 0.5);
+        self.gradientLayer.colors = @[
+            (id)[UIColor redColor].CGColor,
+            (id)[UIColor orangeColor].CGColor,
+            (id)[UIColor yellowColor].CGColor,
+            (id)[UIColor greenColor].CGColor,
+            (id)[UIColor cyanColor].CGColor,
+            (id)[UIColor blueColor].CGColor,
+            (id)[UIColor purpleColor].CGColor,
+            (id)[UIColor redColor].CGColor
+        ];
+        self.layer.mask = self.gradientLayer;
+        
+        CABasicAnimation *animation = [CABasicAnimation animationWithKeyPath:@"colors"];
+        animation.toValue = @[
+            (id)[UIColor purpleColor].CGColor,
+            (id)[UIColor redColor].CGColor,
+            (id)[UIColor orangeColor].CGColor,
+            (id)[UIColor yellowColor].CGColor,
+            (id)[UIColor greenColor].CGColor,
+            (id)[UIColor cyanColor].CGColor,
+            (id)[UIColor blueColor].CGColor,
+            (id)[UIColor purpleColor].CGColor
+        ];
+        animation.duration = 2.5; // Brzina prelivanja
+        animation.repeatCount = HUGE_VALF;
+        animation.autoreverses = YES;
+        [self.gradientLayer addAnimation:animation forKey:@"rainbow"];
+    }
+    self.gradientLayer.frame = self.bounds;
+}
+@end
+
+// --- GLAVNI VIEW CONTROLLER ---
 @interface SCISettingsViewController () <UITableViewDataSource, UITableViewDelegate>
 @property (nonatomic, strong) UITableView *tableView;
 @property (nonatomic, copy) NSArray *sections;
 @property (nonatomic) BOOL reduceMargin;
-@property (nonatomic, strong) NSTimer *rainbowTimer;
-@property (nonatomic, assign) CGFloat currentHue;
 @end
 
 @implementation SCISettingsViewController
@@ -16,16 +60,15 @@ static char rowStaticRef[] = "row";
 - (instancetype)initWithTitle:(NSString *)title sections:(NSArray *)sections reduceMargin:(BOOL)reduceMargin {
     self = [super init];
     if (self) {
-        // Branding: PekiWare -> Hawaii
-        self.title = [title stringByReplacingOccurrencesOfString:@"PekiWare" withString:@"Hawaii"];
+        self.title = @"Hawaii Settings";
         
-        // FILTRIRANJE: Sklanjamo Donate i View Repo
         NSMutableArray *filteredSections = [NSMutableArray new];
         for (NSDictionary *section in sections) {
             NSMutableArray *filteredRows = [NSMutableArray new];
             for (SCISetting *row in section[@"rows"]) {
                 NSString *rt = [row.title lowercaseString];
-                if (![rt containsString:@"donate"] && ![rt containsString:@"view repo"]) {
+                // Izbacujemo nepotrebne stvari ako postoje
+                if (![rt containsString:@"donate"] && ![rt containsString:@"view repo"] && ![rt containsString:@"developer"] && ![rt containsString:@"discord"]) {
                     [filteredRows addObject:row];
                 }
             }
@@ -35,9 +78,27 @@ static char rowStaticRef[] = "row";
                 [filteredSections addObject:newSec];
             }
         }
+
+        // --- RUČNO DODAJEMO HAWAII DEVELOPER I TIKTOK NA KRAJ ---
+        // Samo na početnom ekranu (Hawaii Settings)
+        if ([self.title isEqualToString:@"Hawaii Settings"]) {
+            SCISetting *devRow = [SCISetting new];
+            devRow.title = @"Hawaii Developer";
+            devRow.subtitle = @"Hawaii";
+            
+            SCISetting *tkRow = [SCISetting new];
+            tkRow.title = @"Hawaii TikTok";
+            tkRow.subtitle = @"Join the community!";
+
+            NSDictionary *customSection = @{
+                @"header": @"",
+                @"rows": @[devRow, tkRow]
+            };
+            [filteredSections addObject:customSection];
+        }
+
         self.sections = filteredSections;
         self.reduceMargin = reduceMargin;
-        self.currentHue = 0;
     }
     return self;
 }
@@ -50,9 +111,12 @@ static char rowStaticRef[] = "row";
     [super viewDidLoad];
     self.view.backgroundColor = [UIColor blackColor];
     
-    // TAJMER ZA ANIMACIJU BOJA (0.05s za glatko kretanje)
-    self.rainbowTimer = [NSTimer scheduledTimerWithTimeInterval:0.05 target:self selector:@selector(animateColors) userInfo:nil repeats:YES];
-    [[NSRunLoop mainRunLoop] addTimer:self.rainbowTimer forMode:NSRunLoopCommonModes];
+    HawaiiGradientLabel *navLabel = [[HawaiiGradientLabel alloc] initWithFrame:CGRectMake(0, 0, 200, 44)];
+    navLabel.text = self.title;
+    navLabel.font = [UIFont systemFontOfSize:20 weight:UIFontWeightBold];
+    navLabel.textAlignment = NSTextAlignmentCenter;
+    navLabel.backgroundColor = [UIColor whiteColor]; 
+    self.navigationItem.titleView = navLabel;
 
     self.tableView = [[UITableView alloc] initWithFrame:self.view.bounds style:UITableViewStyleInsetGrouped];
     self.tableView.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
@@ -60,77 +124,46 @@ static char rowStaticRef[] = "row";
     self.tableView.separatorColor = [UIColor colorWithWhite:1.0 alpha:0.1];
     self.tableView.dataSource = self;
     self.tableView.delegate = self;
-    self.tableView.contentInset = UIEdgeInsetsMake(self.reduceMargin ? -25 : 0, 0, 0, 0);
+    self.tableView.contentInset = UIEdgeInsetsMake(-30, 0, 0, 0);
 
     [self.view addSubview:self.tableView];
-}
-
-// Glavna funkcija koja vrti dugu
-- (void)animateColors {
-    self.currentHue += 0.005; 
-    if (self.currentHue > 1.0) self.currentHue = 0;
-    
-    UIColor *animatedColor = [UIColor colorWithHue:self.currentHue saturation:0.9 brightness:1.0 alpha:1.0];
-    
-    // Animacija naslova na vrhu
-    UILabel *titleLabel = (UILabel *)self.navigationItem.titleView;
-    if (![titleLabel isKindOfClass:[UILabel class]]) {
-        titleLabel = [[UILabel alloc] init];
-        titleLabel.font = [UIFont systemFontOfSize:19 weight:UIFontWeightBold];
-        self.navigationItem.titleView = titleLabel;
-    }
-    titleLabel.text = self.title;
-    titleLabel.textColor = animatedColor;
-    [titleLabel sizeToFit];
-
-    // Animacija svih stavki u listi
-    for (UITableViewCell *cell in self.tableView.visibleCells) {
-        cell.textLabel.textColor = animatedColor;
-    }
 }
 
 - (UITableViewCell *)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)indexPath {
     SCISetting *row = self.sections[indexPath.section][@"rows"][indexPath.row];
     
-    static NSString *cellID = @"HawaiiFinalCell";
+    NSString *cellID = [NSString stringWithFormat:@"HawaiiCell-%ld-%ld", (long)indexPath.section, (long)indexPath.row];
     UITableViewCell *cell = [tableView dequeueReusableCellWithIdentifier:cellID];
+    
     if (!cell) {
         cell = [[UITableViewCell alloc] initWithStyle:UITableViewCellStyleSubtitle reuseIdentifier:cellID];
-        cell.backgroundColor = [UIColor colorWithRed:0.08 green:0.08 blue:0.09 alpha:1.0]; // Tamnija pozadina kao na videu
+        cell.backgroundColor = [UIColor colorWithRed:0.11 green:0.11 blue:0.12 alpha:1.0];
+        
+        HawaiiGradientLabel *gLabel = [[HawaiiGradientLabel alloc] initWithFrame:CGRectMake(55, 11, 280, 24)];
+        gLabel.tag = 1001;
+        gLabel.backgroundColor = [UIColor whiteColor];
+        [cell.contentView addSubview:gLabel];
     }
     
-    // Branding teksta
-    NSString *displayTitle = [row.title stringByReplacingOccurrencesOfString:@"PekiWare" withString:@"Hawaii"];
-    NSString *lowerTitle = [displayTitle lowercaseString];
-    
-    if ([lowerTitle containsString:@"discord"] || [lowerTitle containsString:@"community"]) {
-        cell.textLabel.text = @"Hawaii TikTok";
-    } else {
-        cell.textLabel.text = displayTitle;
-    }
+    HawaiiGradientLabel *gLabel = (HawaiiGradientLabel *)[cell.contentView viewWithTag:1001];
+    gLabel.text = [row.title stringByReplacingOccurrencesOfString:@"PekiWare" withString:@"Hawaii"];
+    gLabel.font = [UIFont systemFontOfSize:18 weight:UIFontWeightBold];
 
-    // PODEŠAVANJE FONTA (Krupnije i deblje)
-    cell.textLabel.font = [UIFont systemFontOfSize:18 weight:UIFontWeightBold];
-    cell.textLabel.textColor = [UIColor colorWithHue:self.currentHue saturation:0.9 brightness:1.0 alpha:1.0];
-
-    // Podnaslov (Branding i TikTok)
-    NSString *subText = row.subtitle;
-    if ([subText containsString:@"SoCuul"]) subText = [subText stringByReplacingOccurrencesOfString:@"SoCuul" withString:@"Hawaii"];
-    if ([lowerTitle containsString:@"discord"]) subText = @"Join my TikTok community!";
-    
-    cell.detailTextLabel.text = subText;
+    cell.detailTextLabel.text = row.subtitle;
     cell.detailTextLabel.textColor = [UIColor orangeColor];
-    cell.detailTextLabel.font = [UIFont systemFontOfSize:12];
+    cell.detailTextLabel.font = [UIFont systemFontOfSize:13];
+    cell.textLabel.text = @""; 
 
-    // Ikona
-    if (row.icon != nil) {
+    // Ikone za ručno dodate stavke
+    if ([row.title containsString:@"Developer"]) {
+        cell.imageView.image = [UIImage systemImageNamed:@"person.circle.fill"];
+    } else if ([row.title containsString:@"TikTok"]) {
+        cell.imageView.image = [UIImage systemImageNamed:@"bubble.left.and.bubble.right.fill"];
+    } else if (row.icon != nil) {
         cell.imageView.image = [row.icon image];
-        cell.imageView.tintColor = [UIColor whiteColor];
-    } else {
-        cell.imageView.image = nil;
     }
+    cell.imageView.tintColor = [UIColor whiteColor];
 
-    // Kontrole (Switch)
     if (row.type == SCITableCellSwitch) {
         UISwitch *toggle = [UISwitch new];
         toggle.on = [[NSUserDefaults standardUserDefaults] boolForKey:row.defaultsKey];
@@ -148,10 +181,9 @@ static char rowStaticRef[] = "row";
 
 - (void)tableView:(UITableView *)tableView didSelectRowAtIndexPath:(NSIndexPath *)indexPath {
     SCISetting *row = self.sections[indexPath.section][@"rows"][indexPath.row];
-    NSString *lowerTitle = [row.title lowercaseString];
     
-    // TIKTOK LINK - Ovde upiši svoj link!
-    if ([lowerTitle containsString:@"discord"] || [lowerTitle containsString:@"community"]) {
+    if ([row.title containsString:@"TikTok"]) {
+        // --- OVDE STAVI SVOJ TIKTOK LINK ---
         NSURL *url = [NSURL URLWithString:@"https://www.tiktok.com/@TVOJ_PROFIL"]; 
         [[UIApplication sharedApplication] openURL:url options:@{} completionHandler:nil];
     } 
@@ -171,11 +203,6 @@ static char rowStaticRef[] = "row";
     SCISetting *row = objc_getAssociatedObject(sender, rowStaticRef);
     [[NSUserDefaults standardUserDefaults] setBool:sender.isOn forKey:row.defaultsKey];
     if (row.requiresRestart) [SCIUtils showRestartConfirmation];
-}
-
-- (void)viewWillDisappear:(BOOL)animated {
-    [super viewWillDisappear:animated];
-    [self.rainbowTimer invalidate]; // Čistimo tajmer da ne troši bateriju u pozadini
 }
 
 @end
