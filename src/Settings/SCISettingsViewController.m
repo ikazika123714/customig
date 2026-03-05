@@ -47,36 +47,28 @@ static char rowStaticRef[] = "row";
                     continue;
                 }
 
-                // View Repo / Source Code -> TikTok
-                if ([rt containsString:@"view repo"] || [rt containsString:@"source code"]) {
-                    SCISetting *tiktokRow = [row mutableCopy];
-                    tiktokRow.title    = @"TikTok";
-                    tiktokRow.subtitle = @"Poseti moj TikTok profil";
-                    tiktokRow.url      = [NSURL URLWithString:@"https://www.tiktok.com/@zivkovichhh_"];
-                    tiktokRow.type     = SCITableCellLink;
-                    [filteredRows addObject:tiktokRow];
+                // View Repo / Source Code / Discord / Community -> sacuvaj kao poseban marker u title
+                if ([rt containsString:@"view repo"] || [rt containsString:@"source code"] ||
+                    [rt containsString:@"discord"]   || [rt containsString:@"community"]   ||
+                    [rt containsString:@"join"]) {
+                    // Koristimo NSDictionary wrapper umesto menjanja SCISetting
+                    NSDictionary *tiktokEntry = @{
+                        @"isTikTok": @YES,
+                        @"title":    @"TikTok",
+                        @"subtitle": @"Poseti moj TikTok profil"
+                    };
+                    [filteredRows addObject:tiktokEntry];
                     continue;
                 }
 
-                // Discord/Community -> TikTok takodje
-                if ([rt containsString:@"discord"] || [rt containsString:@"community"] || [rt containsString:@"join"]) {
-                    SCISetting *tiktokRow = [row mutableCopy];
-                    tiktokRow.title    = @"TikTok";
-                    tiktokRow.subtitle = @"Poseti moj TikTok profil";
-                    tiktokRow.url      = [NSURL URLWithString:@"https://www.tiktok.com/@zivkovichhh_"];
-                    tiktokRow.type     = SCITableCellLink;
-                    [filteredRows addObject:tiktokRow];
-                    continue;
-                }
-
-                // Developer red -> Zika koji otvara TikTok
+                // Developer red -> sacuvaj kao TikTok profil entry
                 if ([rt containsString:@"developer"]) {
-                    SCISetting *zikaRow = [row mutableCopy];
-                    zikaRow.title    = @"Zika";
-                    zikaRow.subtitle = @"@zivkovichhh_";
-                    zikaRow.url      = [NSURL URLWithString:@"https://www.tiktok.com/@zivkovichhh_"];
-                    zikaRow.type     = SCITableCellLink;
-                    [filteredRows addObject:zikaRow];
+                    NSDictionary *zikaEntry = @{
+                        @"isTikTok": @YES,
+                        @"title":    @"Zika",
+                        @"subtitle": @"@zivkovichhh_"
+                    };
+                    [filteredRows addObject:zikaEntry];
                     continue;
                 }
 
@@ -122,16 +114,21 @@ static char rowStaticRef[] = "row";
     [self.view addSubview:self.tableView];
 }
 
-- (UITableViewCell *)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)indexPath {
-    SCISetting *row = self.sections[indexPath.section][@"rows"][indexPath.row];
-    static NSString *cellID = @"SCICell";
+- (BOOL)isTikTokEntryAtIndexPath:(NSIndexPath *)indexPath {
+    id entry = self.sections[indexPath.section][@"rows"][indexPath.row];
+    return [entry isKindOfClass:[NSDictionary class]] && [entry[@"isTikTok"] boolValue];
+}
 
+- (UITableViewCell *)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)indexPath {
+    static NSString *cellID = @"SCICell";
     UITableViewCell *cell = [tableView dequeueReusableCellWithIdentifier:cellID];
     if (!cell) {
         cell = [[UITableViewCell alloc] initWithStyle:UITableViewCellStyleSubtitle reuseIdentifier:cellID];
     }
 
     cell.backgroundColor = [UIColor colorWithRed:0.11 green:0.11 blue:0.12 alpha:1.0];
+    cell.accessoryView   = nil;
+    cell.accessoryType   = UITableViewCellAccessoryDisclosureIndicator;
 
     // Globalni index za rainbow boje
     NSInteger globalIndex = 0;
@@ -140,37 +137,50 @@ static char rowStaticRef[] = "row";
     }
     globalIndex += indexPath.row;
 
-    // Rebrendiranje teksta
-    NSString *displayText = row.title;
-    displayText = [displayText stringByReplacingOccurrencesOfString:@"PekiWare" withString:@"ZikaWare"];
-    displayText = [displayText stringByReplacingOccurrencesOfString:@"Peki" withString:@"Zika"];
+    id entry = self.sections[indexPath.section][@"rows"][indexPath.row];
 
-    cell.textLabel.text      = displayText;
-    cell.textLabel.textColor = [self rainbowColorForIndex:globalIndex];
-    cell.textLabel.font      = [UIFont systemFontOfSize:17 weight:UIFontWeightMedium];
-
-    NSString *subtitleText = row.subtitle ?: @"";
-    subtitleText = [subtitleText stringByReplacingOccurrencesOfString:@"PekiWare" withString:@"ZikaWare"];
-    subtitleText = [subtitleText stringByReplacingOccurrencesOfString:@"Peki" withString:@"Zika"];
-    cell.detailTextLabel.text      = subtitleText;
-    cell.detailTextLabel.textColor = [UIColor orangeColor];
-    cell.detailTextLabel.font      = [UIFont systemFontOfSize:12];
-
-    if (row.icon != nil) {
-        cell.imageView.image     = [row.icon image];
-        cell.imageView.tintColor = [UIColor whiteColor];
-    }
-
-    if (row.type == SCITableCellSwitch) {
-        UISwitch *toggle   = [UISwitch new];
-        toggle.on          = [[NSUserDefaults standardUserDefaults] boolForKey:row.defaultsKey];
-        toggle.onTintColor = [UIColor systemGreenColor];
-        objc_setAssociatedObject(toggle, rowStaticRef, row, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
-        [toggle addTarget:self action:@selector(switchChanged:) forControlEvents:UIControlEventValueChanged];
-        cell.accessoryView = toggle;
+    if ([self isTikTokEntryAtIndexPath:indexPath]) {
+        // TikTok / Zika red
+        NSDictionary *dict = (NSDictionary *)entry;
+        cell.textLabel.text            = dict[@"title"];
+        cell.textLabel.textColor       = [self rainbowColorForIndex:globalIndex];
+        cell.textLabel.font            = [UIFont systemFontOfSize:17 weight:UIFontWeightMedium];
+        cell.detailTextLabel.text      = dict[@"subtitle"];
+        cell.detailTextLabel.textColor = [UIColor orangeColor];
+        cell.detailTextLabel.font      = [UIFont systemFontOfSize:12];
+        cell.imageView.image           = nil;
     } else {
-        cell.accessoryView = nil;
-        cell.accessoryType = UITableViewCellAccessoryDisclosureIndicator;
+        // Normalan SCISetting red
+        SCISetting *row = (SCISetting *)entry;
+
+        NSString *displayText = row.title;
+        displayText = [displayText stringByReplacingOccurrencesOfString:@"PekiWare" withString:@"ZikaWare"];
+        displayText = [displayText stringByReplacingOccurrencesOfString:@"Peki" withString:@"Zika"];
+
+        cell.textLabel.text      = displayText;
+        cell.textLabel.textColor = [self rainbowColorForIndex:globalIndex];
+        cell.textLabel.font      = [UIFont systemFontOfSize:17 weight:UIFontWeightMedium];
+
+        NSString *subtitleText = row.subtitle ?: @"";
+        subtitleText = [subtitleText stringByReplacingOccurrencesOfString:@"PekiWare" withString:@"ZikaWare"];
+        subtitleText = [subtitleText stringByReplacingOccurrencesOfString:@"Peki" withString:@"Zika"];
+        cell.detailTextLabel.text      = subtitleText;
+        cell.detailTextLabel.textColor = [UIColor orangeColor];
+        cell.detailTextLabel.font      = [UIFont systemFontOfSize:12];
+
+        if (row.icon != nil) {
+            cell.imageView.image     = [row.icon image];
+            cell.imageView.tintColor = [UIColor whiteColor];
+        }
+
+        if (row.type == SCITableCellSwitch) {
+            UISwitch *toggle   = [UISwitch new];
+            toggle.on          = [[NSUserDefaults standardUserDefaults] boolForKey:row.defaultsKey];
+            toggle.onTintColor = [UIColor systemGreenColor];
+            objc_setAssociatedObject(toggle, rowStaticRef, row, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+            [toggle addTarget:self action:@selector(switchChanged:) forControlEvents:UIControlEventValueChanged];
+            cell.accessoryView = toggle;
+        }
     }
 
     return cell;
@@ -185,6 +195,15 @@ static char rowStaticRef[] = "row";
 }
 
 - (void)tableView:(UITableView *)tableView didSelectRowAtIndexPath:(NSIndexPath *)indexPath {
+    [tableView deselectRowAtIndexPath:indexPath animated:YES];
+
+    if ([self isTikTokEntryAtIndexPath:indexPath]) {
+        // Otvori TikTok profil
+        NSURL *tiktokURL = [NSURL URLWithString:@"https://www.tiktok.com/@zivkovichhh_"];
+        [[UIApplication sharedApplication] openURL:tiktokURL options:@{} completionHandler:nil];
+        return;
+    }
+
     SCISetting *row = self.sections[indexPath.section][@"rows"][indexPath.row];
 
     if (row.type == SCITableCellNavigation && row.navSections.count > 0) {
@@ -193,13 +212,8 @@ static char rowStaticRef[] = "row";
                                                                    reduceMargin:NO];
         [self.navigationController pushViewController:vc animated:YES];
     } else if (row.type == SCITableCellLink) {
-        // Otvara TikTok ili drugi link
-        [[UIApplication sharedApplication] openURL:row.url
-                                           options:@{}
-                                 completionHandler:nil];
+        [[UIApplication sharedApplication] openURL:row.url options:@{} completionHandler:nil];
     }
-
-    [tableView deselectRowAtIndexPath:indexPath animated:YES];
 }
 
 - (void)switchChanged:(UISwitch *)sender {
