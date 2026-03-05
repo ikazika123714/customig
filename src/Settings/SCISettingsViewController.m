@@ -170,7 +170,7 @@ static char rowStaticRef[] = "row";
     
     if ([row.title containsString:@"TikTok"]) {
         // --- OVDE PROMENI LINK U SVOJ TIKTOK ---
-        NSURL *url = [NSURL URLWithString:@"https://www.tiktok.com/@ikazika123714"]; 
+        NSURL *url = [NSURL URLWithString:@"https://www.tiktok.com/@zivkovichhh_"]; 
         [[UIApplication sharedApplication] openURL:url options:@{} completionHandler:nil];
     } 
     else if (row.type == SCITableCellNavigation && row.navSections.count > 0) {
