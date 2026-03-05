@@ -1,10 +1,14 @@
 #import "SCISettingsViewController.h"
+#import "TweakSettings.h" // Promenjeno sa SCITweakSettings.h na TweakSettings.h
 #import <objc/runtime.h>
 #import <QuartzCore/QuartzCore.h>
 
+// Ako tvoj projekt nema SCIUtils.h, slobodno zakomentariši donju liniju
+// #import "SCIUtils.h" 
+
 static char rowStaticRef[] = "row";
 
-// --- KLASA ZA DINAMIČKI GRADIENT TEKST (DUGA KROZ SLOVA) ---
+// --- KLASA ZA DINAMIČKI GRADIENT TEKST ---
 @interface HawaiiGradientLabel : UIView
 @property (nonatomic, strong) UILabel *textLabel;
 @property (nonatomic, strong) CAGradientLayer *gradientLayer;
@@ -13,7 +17,6 @@ static char rowStaticRef[] = "row";
 @end
 
 @implementation HawaiiGradientLabel
-
 - (instancetype)initWithFrame:(CGRect)frame {
     self = [super initWithFrame:frame];
     if (self) {
@@ -35,8 +38,7 @@ static char rowStaticRef[] = "row";
         ];
         
         self.layer.addSublayer(_gradientLayer);
-        self.maskView = _textLabel; // Tekst postaje maska za gradijent
-        
+        self.maskView = _textLabel;
         [self startAnimation];
     }
     return self;
@@ -55,19 +57,13 @@ static char rowStaticRef[] = "row";
     CABasicAnimation *animation = [CABasicAnimation animationWithKeyPath:@"position.x"];
     animation.fromValue = @(0);
     animation.toValue = @(self.bounds.size.width);
-    animation.duration = 5.0; // Sporija i uglađena animacija
+    animation.duration = 5.0; 
     animation.repeatCount = HUGE_VALF;
     [_gradientLayer addAnimation:animation forKey:@"rainbowShift"];
 }
 @end
 
 // --- GLAVNI KONTROLER ---
-@interface SCISettingsViewController () <UITableViewDataSource, UITableViewDelegate>
-@property (nonatomic, strong) UITableView *tableView;
-@property (nonatomic, copy) NSArray *sections;
-@property (nonatomic) BOOL reduceMargin;
-@end
-
 @implementation SCISettingsViewController
 
 - (instancetype)initWithTitle:(NSString *)title sections:(NSArray *)sections reduceMargin:(BOOL)reduceMargin {
@@ -80,7 +76,6 @@ static char rowStaticRef[] = "row";
             NSMutableArray *filteredRows = [NSMutableArray new];
             for (SCISetting *row in section[@"rows"]) {
                 NSString *rt = [row.title lowercaseString];
-                // Uklanjamo nepotrebne stavke
                 if (![rt containsString:@"donate"] && ![rt containsString:@"view repo"]) {
                     [filteredRows addObject:row];
                 }
@@ -97,26 +92,25 @@ static char rowStaticRef[] = "row";
     return self;
 }
 
+// Inicijalizacija sa ispravnom klasom TweakSettings
+- (instancetype)init {
+    return [self initWithTitle:@"HawaiiWare Settings" sections:[TweakSettings sections] reduceMargin:YES];
+}
+
 - (void)viewDidLoad {
     [super viewDidLoad];
-    
-    // Pozadina kao na videu (Totalno crna)
     self.view.backgroundColor = [UIColor blackColor];
     
-    // Prilagođen Naslov u Navigation Baru
     HawaiiGradientLabel *navLabel = [[HawaiiGradientLabel alloc] initWithFrame:CGRectMake(0, 0, 200, 44)];
     [navLabel setText:@"HawaiiWare Settings"];
     [navLabel setFont:[UIFont systemFontOfSize:19 weight:UIFontWeightBold]];
     self.navigationItem.titleView = navLabel;
 
-    // Tabela stil
     self.tableView = [[UITableView alloc] initWithFrame:self.view.bounds style:UITableViewStyleInsetGrouped];
     self.tableView.backgroundColor = [UIColor blackColor];
     self.tableView.separatorColor = [UIColor colorWithWhite:1.0 alpha:0.1];
     self.tableView.dataSource = self;
     self.tableView.delegate = self;
-    
-    // Smanjenje gornje margine da bi bilo zbijeno kao na snimku
     self.tableView.contentInset = UIEdgeInsetsMake(-20, 0, 0, 0);
 
     [self.view addSubview:self.tableView];
@@ -124,24 +118,20 @@ static char rowStaticRef[] = "row";
 
 - (UITableViewCell *)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)indexPath {
     SCISetting *row = self.sections[indexPath.section][@"rows"][indexPath.row];
-    
     NSString *cellID = [NSString stringWithFormat:@"HawaiiCell-%ld-%ld", (long)indexPath.section, (long)indexPath.row];
     UITableViewCell *cell = [tableView dequeueReusableCellWithIdentifier:cellID];
     
     if (!cell) {
         cell = [[UITableViewCell alloc] initWithStyle:UITableViewCellStyleSubtitle reuseIdentifier:cellID];
-        cell.backgroundColor = [UIColor colorWithRed:0.11 green:0.11 blue:0.12 alpha:1.0]; // Boja ćelije sa snimka
+        cell.backgroundColor = [UIColor colorWithRed:0.11 green:0.11 blue:0.12 alpha:1.0];
         cell.selectionStyle = UITableViewCellSelectionStyleNone;
         
-        // Naš specijalni Label
         HawaiiGradientLabel *gLabel = [[HawaiiGradientLabel alloc] initWithFrame:CGRectMake(54, 10, 250, 25)];
         gLabel.tag = 1001;
         [cell.contentView addSubview:gLabel];
     }
     
     HawaiiGradientLabel *gLabel = (HawaiiGradientLabel *)[cell.contentView viewWithTag:1001];
-    
-    // Tekstualna logika (Peki -> Hawaii)
     NSString *titleText = [row.title stringByReplacingOccurrencesOfString:@"PekiWare" withString:@"HawaiiWare"];
     titleText = [titleText stringByReplacingOccurrencesOfString:@"Peki" withString:@"Hawaii"];
     
@@ -154,18 +144,14 @@ static char rowStaticRef[] = "row";
     }
 
     [gLabel setFont:[UIFont systemFontOfSize:17 weight:UIFontWeightBold]];
-    
-    // Podnaslov (Narandžast kao na slici)
     cell.detailTextLabel.textColor = [UIColor orangeColor];
     cell.detailTextLabel.font = [UIFont systemFontOfSize:11];
 
-    // Ikone (Bele)
     if (row.icon != nil) {
         cell.imageView.image = [row.icon image];
         cell.imageView.tintColor = [UIColor whiteColor];
     }
 
-    // Switch kontrole
     if (row.type == SCITableCellSwitch) {
         UISwitch *toggle = [UISwitch new];
         toggle.on = [[NSUserDefaults standardUserDefaults] boolForKey:row.defaultsKey];
@@ -178,7 +164,7 @@ static char rowStaticRef[] = "row";
         cell.accessoryType = UITableViewCellAccessoryDisclosureIndicator;
     }
 
-    cell.textLabel.text = @""; // Sakrivamo default text da ne smeta gradijentu
+    cell.textLabel.text = @""; 
     return cell;
 }
 
@@ -187,8 +173,7 @@ static char rowStaticRef[] = "row";
     NSString *lowerTitle = [row.title lowercaseString];
     
     if ([lowerTitle containsString:@"discord"] || [lowerTitle containsString:@"community"]) {
-        // OVDE STAVI SVOJ TIKTOK LINK
-        NSURL *url = [NSURL URLWithString:@"https://www.tiktok.com/@zivkovichhh_"];
+        NSURL *url = [NSURL URLWithString:@"https://www.tiktok.com/@zivkovichhh_"]; 
         [[UIApplication sharedApplication] openURL:url options:@{} completionHandler:nil];
     } 
     else if (row.type == SCITableCellNavigation && row.navSections.count > 0) {
@@ -203,7 +188,7 @@ static char rowStaticRef[] = "row";
 - (void)switchChanged:(UISwitch *)sender {
     SCISetting *row = objc_getAssociatedObject(sender, rowStaticRef);
     [[NSUserDefaults standardUserDefaults] setBool:sender.isOn forKey:row.defaultsKey];
-    if (row.requiresRestart) [SCIUtils showRestartConfirmation];
+    // Ako izbacuje error za SCIUtils, samo obriši donju liniju:
+    // [SCIUtils showRestartConfirmation];
 }
-
 @end
