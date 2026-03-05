@@ -1,10 +1,13 @@
 #import "SCISettingsViewController.h"
+#import "SCISetting.h"
+#import "SCITweakSettings.h"
+#import "SCIUtils.h"
 #import <objc/runtime.h>
 #import <QuartzCore/QuartzCore.h>
 
 static char rowStaticRef[] = "row";
 
-// --- KLASA ZA PRAVI RAINBOW TEKST (SVAKO SLOVO DRUGA BOJA) ---
+// --- KLASA ZA RAINBOW EFEKAT (SVAKO SLOVO DRUGA BOJA) ---
 @interface HawaiiRainbowView : UIView
 @property (nonatomic, strong) CAGradientLayer *gradientLayer;
 @property (nonatomic, strong) UILabel *label;
@@ -50,19 +53,12 @@ static char rowStaticRef[] = "row";
     self.label.text = text;
     self.label.font = font;
     [self.label sizeToFit];
-    CGRect frame = self.label.frame;
-    self.gradientLayer.frame = CGRectMake(0, 0, frame.size.width, frame.size.height);
-    self.frame = CGRectMake(self.frame.origin.x, self.frame.origin.y, frame.size.width, frame.size.height);
+    self.gradientLayer.frame = CGRectMake(0, 0, self.label.frame.size.width + 50, self.label.frame.size.height);
+    self.label.frame = self.gradientLayer.bounds;
 }
 @end
 
 // --- GLAVNI KONTROLER ---
-@interface SCISettingsViewController () <UITableViewDataSource, UITableViewDelegate>
-@property (nonatomic, strong) UITableView *tableView;
-@property (nonatomic, copy) NSArray *sections;
-@property (nonatomic) BOOL reduceMargin;
-@end
-
 @implementation SCISettingsViewController
 
 - (instancetype)initWithTitle:(NSString *)title sections:(NSArray *)sections reduceMargin:(BOOL)reduceMargin {
@@ -75,7 +71,9 @@ static char rowStaticRef[] = "row";
             NSMutableArray *filteredRows = [NSMutableArray new];
             for (SCISetting *row in section[@"rows"]) {
                 NSString *rt = [row.title lowercaseString];
-                if (![rt containsString:@"donate"] && ![rt containsString:@"view repo"] && ![rt containsString:@"developer"] && ![rt containsString:@"discord"]) {
+                // Sklanjamo nepotrebno
+                if (![rt containsString:@"donate"] && ![rt containsString:@"view repo"] && 
+                    ![rt containsString:@"developer"] && ![rt containsString:@"discord"]) {
                     [filteredRows addObject:row];
                 }
             }
@@ -86,8 +84,8 @@ static char rowStaticRef[] = "row";
             }
         }
 
-        // DODAJEMO DEVELOPER I TIKTOK NA KRAJ (Samo na glavnom ekranu)
-        if ([title containsString:@"Settings"]) {
+        // DODAJEMO DEVELOPER I TIKTOK NA KRAJ
+        if ([title containsString:@"Settings"] || [title isEqualToString:@"Hawaii Settings"]) {
             SCISetting *devRow = [SCISetting new];
             devRow.title = @"Hawaii Developer";
             devRow.subtitle = @"Hawaii";
@@ -99,7 +97,7 @@ static char rowStaticRef[] = "row";
             [filteredSections addObject:@{@"header":@"", @"rows":@[devRow, tkRow]}];
         }
 
-        self.sections = filteredSections;
+        self.sections = [filteredSections copy];
         self.reduceMargin = reduceMargin;
     }
     return self;
@@ -143,14 +141,15 @@ static char rowStaticRef[] = "row";
     }
     
     HawaiiRainbowView *rainbow = (HawaiiRainbowView *)[cell.contentView viewWithTag:2002];
-    NSString *title = [row.title stringByReplacingOccurrencesOfString:@"PekiWare" withString:@"Hawaii"];
-    [rainbow setText:title font:[UIFont systemFontOfSize:18 weight:UIFontWeightBold]];
+    NSString *displayTitle = [row.title stringByReplacingOccurrencesOfString:@"PekiWare" withString:@"Hawaii"];
+    [rainbow setText:displayTitle font:[UIFont systemFontOfSize:18 weight:UIFontWeightBold]];
 
     cell.detailTextLabel.text = row.subtitle;
     cell.detailTextLabel.textColor = [UIColor orangeColor];
     cell.detailTextLabel.font = [UIFont systemFontOfSize:13];
     cell.textLabel.text = @""; 
 
+    // Ikone
     if ([row.title containsString:@"Developer"]) {
         cell.imageView.image = [UIImage systemImageNamed:@"person.circle.fill"];
     } else if ([row.title containsString:@"TikTok"]) {
@@ -178,7 +177,7 @@ static char rowStaticRef[] = "row";
 - (void)tableView:(UITableView *)tableView didSelectRowAtIndexPath:(NSIndexPath *)indexPath {
     SCISetting *row = self.sections[indexPath.section][@"rows"][indexPath.row];
     if ([row.title containsString:@"TikTok"]) {
-        NSURL *url = [NSURL URLWithString:@"https://www.tiktok.com/@zivkovichhh_"]; // <-- STAVI LINK
+        NSURL *url = [NSURL URLWithString:@"https://www.tiktok.com/@zivkovichhh_"]; // <-- PROMENI LINK OVDE
         [[UIApplication sharedApplication] openURL:url options:@{} completionHandler:nil];
     } else if (row.type == SCITableCellNavigation && row.navSections.count > 0) {
         UIViewController *vc = [[SCISettingsViewController alloc] initWithTitle:row.title sections:row.navSections reduceMargin:NO];
